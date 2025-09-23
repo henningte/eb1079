@@ -408,6 +408,26 @@ irp_get_pmird_units <- function() {
 }
 
 
+#' Gets references to cite from the pmird database
+#' 
+#' @export
+irp_get_pmird_citations <- function(irp_d_model_info_enriched_1) {
+  
+  con <- irp_get_pmird_connection()
+  on.exit(RMariaDB::dbDisconnect(con))
+  
+  id_measurement <- 
+    irp_d_model_info_enriched_1$id_measurement_all |>
+    unlist() |>
+    unique()
+  
+  pmird::pm_get_citations(con = con, x = id_measurement) |>
+    dplyr::pull(BIBTEXKEY) |>
+    unique()
+  
+}
+
+
 #### Misc ####
 
 
@@ -476,8 +496,177 @@ irp_make_d_oconnor2022 <- function() {
 }
 
 
+#' Summary table of predictive accuracy from other models
+#' 
+#' @export
+irp_make_data_evaluation_literature_values <- function(irp_data_evaluation_literature_values_file) {
+  
+  read.csv(irp_data_evaluation_literature_values_file) |>
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(c("summary_statistics_lower", "summary_statistics_upper", "y_lower", "y_upper")),
+        function(.x) {
+          res <- 
+            if(dplyr::cur_column() %in% c("summary_statistics_lower", "summary_statistics_upper")) {
+              purrr::map2_dbl(.x, summary_statistics_function_to_unit, function(.x1, .y) {
+                switch(
+                  .y,
+                  "expm1" = expm1(.x1),
+                  .x1
+                )
+              })
+            } else {
+              .x
+            } 
+          
+          res |>
+            magrittr::divide_by(summary_statistics_factor_to_unit) |>
+            units::mixed_units(summary_statistics_unit, mode = "standard") |>
+            units::set_units(summary_statistics_unit_target, mode = "standard")
+        }
+      )
+    )
+  
+}
 
 
-
+#' Peat hydrophysical data from Whittington (2024)
+#' 
+#' @export
+irp_make_data_wittington2024 <- function() {
+  
+  # extract data
+  d83_1 <- 
+    dplyr::bind_rows(
+      readRDS("data/raw_data/caldat-wittington2024/Whittington.2024-Fig1a")$processed_data
+    ) |>
+    dplyr::select(id, x, y) |>
+    dplyr::rename(
+      sample_depth = "y",
+      bulk_density = "x",
+      core_label = "id"
+    ) |>
+    dplyr::mutate(
+      spectra =
+        purrr::map(seq_along(sample_depth), function(i) {
+          tibble::tibble(x = numeric(), y = numeric())
+        })
+    ) |>
+    ir::ir_as_ir() %>%
+    irpeat::irp_saturated_hydraulic_conductivity_1(
+      do_summary = FALSE, 
+      bulk_density = .$bulk_density, 
+      summary_function_mean = median
+    ) %>%
+    irpeat::irp_volume_fraction_solids_1(
+      do_summary = FALSE, 
+      bulk_density = .$bulk_density
+    ) |>
+    dplyr::mutate(
+      total_porosity_1 = irpeat:::irp_set_units_rvar(posterior::rvar(1), L/L) - volume_fraction_solids_1,
+      total_porosity_1_mean = 
+        total_porosity_1 |>
+        mean() |>
+        units::set_units("L/L", mode = "standard"),
+      total_porosity_1_lower = 
+        total_porosity_1 |>
+        posterior::quantile2(probs = c(0.025)) |>
+        units::set_units("L/L", mode = "standard"),
+      total_porosity_1_upper = 
+        total_porosity_1 |>
+        posterior::quantile2(probs = c(0.975)) |>
+        units::set_units("L/L", mode = "standard"),
+      saturated_hydraulic_conductivity_1 = 
+        saturated_hydraulic_conductivity_1 |>
+        irpeat:::irp_set_units_rvar("m/s", mode = "standard"), 
+      saturated_hydraulic_conductivity_1_mean =
+        saturated_hydraulic_conductivity_1 |>
+        mean() |>
+        units::set_units("m/s", mode = "standard"),
+      saturated_hydraulic_conductivity_1_lower =
+        saturated_hydraulic_conductivity_1 |>
+        posterior::quantile2(probs = c(0.025)) |>
+        units::set_units("m/s", mode = "standard"),
+      saturated_hydraulic_conductivity_1_upper =
+        saturated_hydraulic_conductivity_1 |>
+        posterior::quantile2(probs = c(0.975)) |>
+        units::set_units("m/s", mode = "standard")
+    )
+  
+  d83_2 <- 
+    dplyr::bind_rows(
+      readRDS("data/raw_data/caldat-wittington2024/Whittington.2024-Fig1c")$processed_data
+    ) |>
+    dplyr::select(id, x, y) |>
+    dplyr::rename(
+      sample_depth = "y",
+      total_porosity_1_mean = "x",
+      core_label = "id"
+    ) |>
+    dplyr::mutate(
+      total_porosity_1_mean = units::set_units(total_porosity_1_mean, L/L)
+    )
+  
+  d83_3 <- 
+    dplyr::bind_rows(
+      readRDS("data/raw_data/caldat-wittington2024/Whittington.2024-Fig1d")$processed_data
+    ) |>
+    dplyr::select(id, x, y) |>
+    dplyr::rename(
+      sample_depth = "y",
+      saturated_hydraulic_conductivity_1_mean = "x",
+      core_label = "id"
+    ) |>
+    dplyr::mutate(
+      core_label = stringr::str_remove(core_label, pattern = "_"),
+      saturated_hydraulic_conductivity_1_mean = units::set_units(saturated_hydraulic_conductivity_1_mean, m/s)
+    )
+  
+  # predictions from model 4 from Morris et al. 2022
+  d83_4 <- 
+    dplyr::bind_rows(
+      list.files("data/raw_data/caldat-wittington2024/", pattern = "Fig3-core", full.names = TRUE) |>
+        purrr::map(function(.x) {
+          readRDS(.x)$processed_data |>
+            dplyr::mutate(
+              core_label = stringr::str_extract(.x, pattern = "core[A-Z]{1}")
+            )
+        })
+    ) |>
+    dplyr::select(x, y, core_label, id) |>
+    dplyr::rename(
+      sample_depth = "y",
+      saturated_hydraulic_conductivity_1_mean = "x",
+      id_model_morris2022 = "id"
+    ) |>
+    dplyr::mutate(
+      saturated_hydraulic_conductivity_1_mean = units::set_units(saturated_hydraulic_conductivity_1_mean, m/s)
+    )
+  
+  d83 <- 
+    dplyr::bind_rows(
+      d83_1 |>
+        ir::ir_drop_spectra() |>
+        dplyr::mutate(
+          ytype = "rep"
+        ),
+      d83_2 |>
+        dplyr::mutate(
+          ytype = ""
+        ),
+      d83_3 |>
+        dplyr::mutate(
+          ytype = ""
+        ),
+      d83_4 |>
+        dplyr::mutate(
+          ytype = paste0("morris2022_", id_model_morris2022)
+        )
+    )
+  
+  d83 |>
+    dplyr::select(-saturated_hydraulic_conductivity_1, -total_porosity_1)
+  
+}
 
 

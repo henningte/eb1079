@@ -1,0 +1,19 @@
+id_sample,site_label,sampling_longitude,sampling_latitude,sample_type,sample_type2,sample_label,sample_depth_upper,sample_depth_lower,sampling_date,C,N,ash_content,bulk_density,total_porosity
+1,site1,22.7388,53.6306,peat,moorsh peat,,0,15,NA,39,3.3,19.24,0.3441,0.793
+2,site1,22.7388,53.6306,peat,reed peat,,45,50,NA,43.27,2.71,13.52,0.162,0.8987
+3,site1,22.7388,53.6306,peat,reed peat,,75,80,NA,48.88,2.4,10.75,0.135,0.914
+4,site2,22.6349,53.6082,peat,moorsh peat,,0,15,NA,42.06,2.99,19.01,0.3397,0.7954
+5,site2,22.6349,53.6082,peat,sedge-reed peat,,45,50,NA,44.63,2.83,11.58,0.1559,0.9012
+6,site2,22.6349,53.6082,peat,reed peat,,75,80,NA,45.04,2.11,10.95,0.1489,0.9052
+7,site3,22.5779,53.6507,peat,moorsh peat,,0,15,NA,40.05,3.1,21.15,0.3047,0.819
+8,site3,22.5779,53.6507,peat,alder peat,,22,32,NA,43.41,3.07,13.26,0.1944,0.8783
+9,site3,22.5779,53.6507,peat,alder peat,,45,60,NA,42.06,3.36,14.85,0.1894,0.8827
+10,site3,22.5779,53.6507,peat,alder peat,,75,80,NA,40.03,2.81,17.64,0.2204,0.8659
+11,site4,22.6456,53.7007,peat,moorsh peat,,5,15,NA,38.95,2.63,19.78,0.1803,0.8919
+12,site4,22.6456,53.7007,peat,sedge-moss peat,,15,30,NA,41.12,2.34,16.15,0.1785,0.8904
+13,site4,22.6456,53.7007,peat,sedge-moss peat,,40,50,NA,49.5,2.92,10.6,0.1326,0.9154
+14,site5,22.413,53.7023,peat,moorsh peat,,0,10,NA,26.39,2,31.59,0.2507,0.8606
+15,site5,22.413,53.7023,peat,moorsh peat,,10,20,NA,27.9,2.1,25.04,0.2307,0.8664
+16,site5,22.413,53.7023,peat,sedge-reed peat,,50,60,NA,47.64,3.2,10.01,0.1443,0.9076
+17,site6,17.521,54.6987,peat,moss peat,,0,10,NA,50.56,1.1,2,0.0587,0.9601
+18,site6,17.521,54.6987,peat,moss peat,,10,20,NA,51.96,1.4,2.5,0.0702,0.9525

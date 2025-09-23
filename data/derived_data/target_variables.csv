@@ -1,0 +1,20 @@
+id_target_variable,name_target_variable,label_target_variable,definition_target_variable,reference_target_variable,significance_target_variable
+1,carbon content,C,Mass content of C in 1 g bulk peat.,NA,Quantifying peat C stocks.
+2,hydrogen content,H,Mass content of H in 1 g bulk peat.,NA,Quantifying peat H stocks.
+3,nitrogen content,N,Mass content of N in 1 g bulk peat.,NA,Quantifying peat N stocks. Quantifying nutrient limitation. Quantifying peat decomposability.
+4,oxygen content,O,Mass content of O in 1 g bulk peat.,NA,Quantifying peat O stocks.
+5,sulfur content,S,Mass content of S in 1 g bulk peat.,NA,Quantifying peat S stocks.
+6,phosphorus content,P,Mass content of P in 1 g bulk peat.,NA,Quantifying peat P stocks. Quantifying nutrient limitations.
+7,potassium content,K,Mass content of K in 1 g bulk peat.,NA,Quantifying peat K stocks. Quantifying nutrient limitations.
+8,calcium content,Ca,Mass content of Ca in 1 g bulk peat.,NA,Quantifying peat Ca stocks. Quantifying minerotrophy.
+9,titanium content,Ti,Mass content of Ti in 1 g bulk peat.,NA,Quantifying peat Ti stocks. Quantifying mineral dust inputs and decomposition mass losses.
+10,silicon content,Si,Mass content of Si in 1 g bulk peat.,NA,Quantifying peat mineral inputs.
+11,$\delta^{13}$C value,d13C,$\delta^{13}$C value of bulk peat.,NA,"Quantifying degree of decomposition, moisture conditions during photosynthesis."
+12,$\delta^{15}$N value,d15N,$\delta^{15}$N value of bulk peat.,NA,"Quantifying degree of decomposition, moisture conditions during photosynthesis."
+13,nominal oxidation state of carbon,nosc,Nominal oxidation state of carbon as defined in \cite{Masiello.2008}.,Masiello.2008,Quantifying degree of decomposition (e.g. @Worrall.2018). Computation of the oxidative ratio [@Masiello.2018].
+14,standard Gibbs free energy of formation,dgf0,Standard free Gibbs energy of formation as defined,NA,Quantifying thermodynamic feasibility of reactions.
+15,loss on ignition,loss_on_ignition,Mass lost during combustion of the dried sample at 400$^\circ$C.,NA,Quantifying organic matter pools and mineral pools. Quantifying degree of decomposition.
+16,dry bulk density,bulk_density,Mass of the dried sample divided by its volume.,NA,Quantifying peat hydraulic properties \cite{Liu.2019}. Quantifying peat element stocks. Quantifying peat degree of decomposition.
+17,O/C ratio,oc,The mass ratio of a samples' O and C content.,NA,"Estimating the degree of decomposition, estimating the abundance of organic matter fractions from Van Krevelen diagrams."
+18,H/C ratio,hc,The mass ratio of a samples' H and C content.,NA,"Estimating the degree of decomposition, estimating the abundance of organic matter fractions from Van Krevelen diagrams."
+19,C/N ratio,nc,The mass ratio of a samples' C and N content.,NA,"Estimating the degree of decomposition, estimating the abundance of organic matter fractions from Van Krevelen diagrams."

@@ -1,7 +1,7 @@
 #' Creates a list with preprocessing configurations that is compatible with irpeat
 #' 
 #' @export
-irp_make_mir_preprocessing_config <- function(irp_mir_preprocessing_settings, irp_d_model_info, irp_dimension_reduction_model_1) {
+irp_make_mir_model_config <- function(irp_mir_preprocessing_settings, irp_d_model_info, prediction_domain) {
     
     res <- 
       irp_mir_preprocessing_settings |>
@@ -18,15 +18,17 @@ irp_make_mir_preprocessing_config <- function(irp_mir_preprocessing_settings, ir
     
     list(
       target_variable = irp_d_model_info$id_model[[1]],
-      irp_preprocess = res,
-      do_dimension_reduction = irp_d_model_info$do_dimension_reduction[[1]],
-      dimension_reduction_method = irp_d_model_info$dimension_reduction_method[[1]],
-      dimension_reduction_model = irp_dimension_reduction_model_1,
-      dimension_reduction_ncomps = irp_d_model_info$ncomps[[1]],
-      prediction_domain = 
+      likelihood = irp_d_model_info$likelihood[[1]],
+      unit = 
+        irp_d_model_info$target_variable |> 
+        irp_get_units_for_irpeat(),
+      model_scale =
         list(
-          train = irp_d_model_info$prediction_domain[[1]]
-        )
+          y_center = irp_d_model_info$y_center[[1]],
+          y_scale = irp_d_model_info$y_scale[[1]]
+        ),
+      irp_preprocess = res,
+      prediction_domain = prediction_domain[c(1,2)]
     )
   
 }
@@ -45,7 +47,7 @@ irp_preprocess_eb1079 <- function (x, config) {
   res <- x
   
   res |>
-    ir::ir_interpolate_region(range = tibble::tibble(start = c(645, 2230), end = c(695, 2410))) |>
+    #ir::ir_interpolate_region(range = tibble::tibble(start = c(645, 2230), end = c(695, 2410))) |>
     ir::ir_interpolate_region(range = tibble::tibble(start = c(650), end = c(695))) |>
     irpeat::irp_preprocess(
       do_interpolate = config$irp_preprocess$do_interpolate, 
@@ -82,7 +84,7 @@ irp_preprocess_eb1079 <- function (x, config) {
 }
 
 
-#' Helper that prepares the data for the brms models (predicts scores with the dimension reduction model)
+#' Helper that prepares the data for the brms models
 #' 
 #'@export
 irp_predict_for_eb1079_helper_1 <- function(x, config) {
@@ -95,17 +97,11 @@ irp_predict_for_eb1079_helper_1 <- function(x, config) {
         dplyr::select(-1) |>
         t() |>
         tibble::as_tibble() |>
-        setNames(nm = paste0("V", x$spectra[[1]]$x))
+        setNames(nm = paste0("V", x$spectra[[1]]$x)) |>
+        as.matrix()
     )
   
-  tibble::tibble(
-    x = 
-      irp_predict_scores_dimension_reduction_model_1(
-        irp_dimension_reduction_model_1 = config$dimension_reduction_model, 
-        newdata = newdata, 
-        ncomps = config$dimension_reduction_ncomps
-      )
-  )
+  newdata
   
 }
 

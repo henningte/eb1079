@@ -330,8 +330,10 @@ irp_make_m6 <- function(irp_d_oconnor2022, irp_mcmc_settings) {
   res_prior <- 
     c(
       brms::prior_string(paste0("normal(", log(.9894 * 2.414 * 10^(-4) * 100),", 0.5)"), class = "Intercept"), #---note: thermal conductivity of dry air at 1 atm (@Hilsenrath.1955, with multiplication factor 2.414 * 10^(-4) from @Hilsenrath.1955 and additional multiplication factor 100 to normalize per m)
-      brms::prior_string(paste0("normal(", 0,", 1.0)"), class = "b"),
-      brms::prior_string(paste0("gamma(1.0, 1.0/200.0)"), class = "shape")
+      brms::prior_string(paste0("normal(", 0.0,", 1.0)"), class = "b"),
+      #brms::prior_string(paste0("gamma(1.0, 1.0/200.0)"), class = "shape"),
+      brms::prior_string(paste0("normal(", 0.0,", 1.0)"), class = "Intercept", dpar = "shape"),
+      brms::prior_string(paste0("normal(", 0.0,", 1.0)"), class = "b", dpar = "shape")
     )
   
   # define scaling variables
@@ -339,7 +341,10 @@ irp_make_m6 <- function(irp_d_oconnor2022, irp_mcmc_settings) {
   
   res_model <- 
     brms::brm(
-      brms::bf(dry_thermal_conductivity ~ bulk_density + log(bulk_density)),
+      brms::bf(
+        dry_thermal_conductivity ~ bulk_density + log(bulk_density),
+        shape ~ log(bulk_density) + bulk_density
+      ),
       data = res_data, 
       family = Gamma(link = "log"),
       chains = irp_mcmc_settings$chains,

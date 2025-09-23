@@ -3,7 +3,7 @@
 #' @export
 irp_get_mir_preprocessing_settings <- function() {
   
-  spectral_preprocessing_n <- 2L
+  spectral_preprocessing_n <- 3L
   
   d_spectral_preprocessing_settings <- 
     tibble::tibble(
@@ -18,11 +18,11 @@ irp_get_mir_preprocessing_settings <- function() {
       bc_method = "rubberband",
       bc_cutoff = 5, 
       bc_do_impute = TRUE,
-      do_smooth = c(FALSE),
+      do_smooth = c(FALSE, TRUE, TRUE),
       smooth_method = "sg",
       smooth_p = 3,
       smooth_n = 31,
-      smooth_m = c(0, 1),
+      smooth_m = c(0, 1, 2),
       smooth_ts = 1,
       smooth_k = NA_real_,
       do_normalise = TRUE,
@@ -150,7 +150,6 @@ irp_make_data_model_preprocessed <- function(irp_pmird_mirs, irp_mir_preprocessi
     dplyr::pull(spectra)
   
 }
-
 
 
 

@@ -60,11 +60,23 @@ readRDS_rvars <- function(file) {
 irp_get_mcmc_settings <- function() {
   
   list(
-    iter = 4000L,
-    warmup = 2000L,
+    iter = 5000L,
+    warmup = 3000L,
     chains = 4L,
     adapt_delta = 0.9,
     max_treedepth = 12
+  )
+  
+}
+
+irp_get_mcmc_settings_horseshoe <- function() {
+  
+  list(
+    iter = 5000L,
+    warmup = 3000L,
+    chains = 4L,
+    adapt_delta = 0.99,
+    max_treedepth = 14
   )
   
 }
@@ -96,7 +108,13 @@ irp_rmse_rvar <- function(yhat, y) {
   
 }
 
-
+#' Computes the RMSE with rvar objects
+#' @export
+irp_rmse <- function(yhat, y) {
+  
+  sqrt(mean((yhat - y)^2)) 
+  
+}
 
 #### Target variables ####
 
@@ -119,8 +137,8 @@ irp_get_tv_table <- function(irp_target_variables) {
         variable == "titanium_content" ~ "Mass content of Ti in 1 g bulk peat.",
         variable == "silicon_content" ~ "Mass content of Si in 1 g bulk peat.",
         variable == "calcium_content" ~ "Mass content of Ca in 1 g bulk peat.",
-        variable == "d13C" ~ "$\\delta^{13}$C value of bulk peat relative to Vienna Pee Dee Bee standard.",
-        variable == "d15N" ~ "$\\delta^{15}$N value of bulk peat relative to Air standard.",
+        variable == "d13C" ~ "$\\delta^{13}$C value of bulk peat relative to the Vienna Pee Dee Bee standard.",
+        variable == "d15N" ~ "$\\delta^{15}$N value of bulk peat relative to the Air N$_2$ standard.",
         variable == "nosc" ~ "Nominal oxidation state of carbon as defined in (ref:Masiello2008-textual)",
         variable == "dgf0" ~ "Standard free Gibbs energy of formation (25°C, 1 bar).",
         variable == "loss_on_ignition" ~ "Fraction of initial mass lost during combustion of the dried sample at 400°C.",
@@ -140,7 +158,7 @@ irp_get_tv_table <- function(irp_target_variables) {
         variable == "potassium_content" ~ "Estimating peat K stocks. Quantifying nutrient limitations.",
         variable == "calcium_content" ~ "Estimating peat Ca stocks. Quantifying minerotrophy.",
         variable == "titanium_content" ~ "Estimating peat Ti stocks. Quantifying mineral dust inputs and decomposition mass losses.",
-        variable == "silocon_content" ~ "Estimating peat mineral inputs.",
+        variable == "silicon_content" ~ "Estimating peat mineral inputs. Si controls the Fe and P cycle (ref:)",
         variable == "d13C" ~ "Estimating degree of decomposition, moisture conditions during photosynthesis.",
         variable == "d15N" ~ "Estimating degree of decomposition, moisture conditions during photosynthesis.",
         variable == "nosc" ~ "Estimating degree of decomposition. Computation of the oxidative ratio (ref:Masiello2008).",
@@ -152,6 +170,366 @@ irp_get_tv_table <- function(irp_target_variables) {
         variable == "H_to_C" ~ "Estimating the degree of decomposition, estimating the abundance of organic matter fractions from Van Krevelen diagrams."
       )
   )
+  
+}
+
+
+#' Defines units for the target variables
+#' 
+#' @param what Character value. One of `unit_for_modeling`, `unit_for_plotting`,
+#' `unit_for_plotting_html`, `unit_for_plotting_html_no_element_subscripts`,
+#' `unit_latex_no_element_subscripts`.
+#' 
+#' @export
+irp_get_units_target_variables <- function(x, what) {
+  
+  res <- 
+    tibble::tibble(
+      target_variable = x
+    ) |>
+    dplyr::mutate(
+      unit_for_modeling =
+        dplyr::case_when(
+          target_variable == "carbon_content" ~ "g_C/g_sample",
+          target_variable == "nitrogen_content" ~ "g_N/g_sample",
+          target_variable == "oxygen_content" ~ "g_O/g_sample",
+          target_variable == "hydrogen_content" ~ "g_H/g_sample",
+          target_variable == "phosphorus_content" ~ "g_P/g_sample",
+          target_variable == "sulfur_content" ~ "g_S/g_sample",
+          target_variable == "potassium_content" ~ "g_K/g_sample",
+          target_variable == "titanium_content" ~ "g_Ti/g_sample",
+          target_variable == "silicon_content" ~ "g_Si/g_sample",
+          target_variable == "calcium_content" ~ "g_Ca/g_sample",
+          target_variable == "d13C" ~ "1",
+          target_variable == "d15N" ~ "1",
+          target_variable == "nosc" ~ "1",
+          target_variable == "dgf0" ~ "J/mol_C",
+          target_variable == "loss_on_ignition" ~ "g/g_sample",
+          target_variable == "bulk_density" ~ "g/cm^3",
+          target_variable == "C_to_N" ~ "g_C/g_N",
+          target_variable == "O_to_C" ~ "g_O/g_C",
+          target_variable == "H_to_C" ~ "g_H/g_C" 
+        ),
+      unit_for_plotting =
+        dplyr::case_when(
+          target_variable == "carbon_content" ~ "g_C/g_sample",
+          target_variable == "nitrogen_content" ~ "g_N/g_sample",
+          target_variable == "oxygen_content" ~ "g_O/g_sample",
+          target_variable == "hydrogen_content" ~ "g_H/g_sample",
+          target_variable == "phosphorus_content" ~ "ug_P/g_sample",
+          target_variable == "sulfur_content" ~ "ug_S/g_sample",
+          target_variable == "potassium_content" ~ "ug_K/g_sample",
+          target_variable == "titanium_content" ~ "ug_Ti/g_sample",
+          target_variable == "silicon_content" ~ "g_Si/g_sample",
+          target_variable == "calcium_content" ~ "g_Ca/g_sample",
+          target_variable == "d13C" ~ "1",
+          target_variable == "d15N" ~ "1",
+          target_variable == "nosc" ~ "1",
+          target_variable == "dgf0" ~ "kJ/mol_C",
+          target_variable == "loss_on_ignition" ~ "g/g_sample",
+          target_variable == "bulk_density" ~ "g/cm^3",
+          target_variable == "C_to_N" ~ "g_C/g_N",
+          target_variable == "O_to_C" ~ "g_O/g_C",
+          target_variable == "H_to_C" ~ "g_H/g_C" 
+        ),
+      unit_for_plotting_html =
+        dplyr::case_when(
+          target_variable == "carbon_content" ~ "g<sub>C</sub> g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "nitrogen_content" ~ "g<sub>N</sub> g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "oxygen_content" ~ "g<sub>O</sub> g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "hydrogen_content" ~ "g<sub>H</sub> g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "phosphorus_content" ~ "&mu;g<sub>P</sub> g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "sulfur_content" ~ "&mu;g<sub>S</sub> g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "potassium_content" ~ "&mu;g<sub>K</sub> g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "titanium_content" ~ "&mu;g<sub>Ti</sub> g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "silicon_content" ~ "g<sub>Si</sub> g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "calcium_content" ~ "g<sub>Ca</sub> g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "d13C" ~ "&permil;",
+          target_variable == "d15N" ~ "&permil;",
+          target_variable == "nosc" ~ "-",
+          target_variable == "dgf0" ~ "kJ mol<sup>-1</sup><sub>C</sub>",
+          target_variable == "loss_on_ignition" ~ "g g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "bulk_density" ~ "g cm<sup>-3</sup>",
+          target_variable == "C_to_N" ~ "g<sub>C</sub> g<sup>-1</sup><sub>N</sub>",
+          target_variable == "O_to_C" ~ "g<sub>O</sub> g<sup>-1</sup><sub>C</sub>",
+          target_variable == "H_to_C" ~ "g<sub>H</sub> g<sup>-1</sup><sub>C</sub>" 
+        ),
+      unit_for_plotting_html_no_element_subscripts =
+        dplyr::case_when(
+          target_variable == "carbon_content" ~ "g g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "nitrogen_content" ~ "g g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "oxygen_content" ~ "g g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "hydrogen_content" ~ "g g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "phosphorus_content" ~ "&mu;g g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "sulfur_content" ~ "&mu;g g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "potassium_content" ~ "&mu;g g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "titanium_content" ~ "&mu;g g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "silicon_content" ~ "g g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "calcium_content" ~ "g g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "d13C" ~ "&permil;",
+          target_variable == "d15N" ~ "&permil;",
+          target_variable == "nosc" ~ "-",
+          target_variable == "dgf0" ~ "kJ mol<sup>-1</sup><sub>C</sub>",
+          target_variable == "loss_on_ignition" ~ "g g<sup>-1</sup><sub>sample</sub>",
+          target_variable == "bulk_density" ~ "g cm<sup>-3</sup>",
+          target_variable == "C_to_N" ~ "g g<sup>-1",
+          target_variable == "O_to_C" ~ "g g<sup>-1",
+          target_variable == "H_to_C" ~ "g g<sup>-1" 
+        )
+    )
+  
+  res[[what]]
+  
+}
+
+
+#' Latex units
+#' 
+#' @export
+irp_get_units_target_variables_latex <- function(x, what) {
+  
+  res <- 
+    tibble::tibble(
+      target_variable = x
+    ) |>
+    dplyr::mutate(
+      unit_latex_no_element_subscripts =
+        dplyr::case_when(
+          target_variable == "carbon_content" ~ "g g$^{-1}_\\text{sample}$",
+          target_variable == "nitrogen_content" ~ "g g$^{-1}_\\text{sample}$",
+          target_variable == "oxygen_content" ~ "g g$^{-1}_\\text{sample}$",
+          target_variable == "hydrogen_content" ~ "g g$^{-1}_\\text{sample}$",
+          target_variable == "phosphorus_content" ~ "$\\mu$g g$^{-1}_\\text{sample}$",
+          target_variable == "sulfur_content" ~ "$\\mu$g g$^{-1}_\\text{sample}$",
+          target_variable == "potassium_content" ~ "$\\mu$g g$^{-1}_\\text{sample}$",
+          target_variable == "titanium_content" ~ "$\\mu$g g$^{-1}_\\text{sample}$",
+          target_variable == "silicon_content" ~ "g g$^{-1}_\\text{sample}$",
+          target_variable == "calcium_content" ~ "g g$^{-1}_\\text{sample}$",
+          target_variable == "d13C" ~ "$\\text{\\textperthousand}$",
+          target_variable == "d15N" ~ "$\\text{\\textperthousand}$",
+          target_variable == "nosc" ~ "-",
+          target_variable == "dgf0" ~ "kJ mol$^{-1}_\\text{C}$",
+          target_variable == "loss_on_ignition" ~ "g g$^{-1}_\\text{sample}$",
+          target_variable == "bulk_density" ~ "g$_\\text{sample}$ cm$^{-3}_\\text{sample}$",
+          target_variable == "C_to_N" ~ "g g$^{-1}$",
+          target_variable == "O_to_C" ~ "g g$^{-1}$",
+          target_variable == "H_to_C" ~ "g g$^{-1}$" 
+        )
+    )
+  
+  res[[what]]
+  
+}
+
+#' Unit for irpeat
+#' 
+#' Same as`unit_for_modeling`, but with generic units and not elco units.
+#' 
+#' @export
+irp_get_units_for_irpeat <- function(x) {
+  
+  res <- 
+    tibble::tibble(
+      target_variable = x
+    ) |>
+    dplyr::mutate(
+      unit_for_irpeat = 
+        dplyr::case_when(
+          target_variable == "carbon_content" ~ "g/g",
+          target_variable == "nitrogen_content" ~ "g/g",
+          target_variable == "oxygen_content" ~ "g/g",
+          target_variable == "hydrogen_content" ~ "g/g",
+          target_variable == "phosphorus_content" ~ "g/g",
+          target_variable == "sulfur_content" ~ "g/g",
+          target_variable == "potassium_content" ~ "g/g",
+          target_variable == "titanium_content" ~ "g/g",
+          target_variable == "silicon_content" ~ "g/g",
+          target_variable == "calcium_content" ~ "g/g",
+          target_variable == "d13C" ~ "1",
+          target_variable == "d15N" ~ "1",
+          target_variable == "nosc" ~ "1",
+          target_variable == "dgf0" ~ "J/mol",
+          target_variable == "loss_on_ignition" ~ "g/g",
+          target_variable == "bulk_density" ~ "g/cm^3",
+          target_variable == "C_to_N" ~ "g/g",
+          target_variable == "O_to_C" ~ "g/g",
+          target_variable == "H_to_C" ~ "g/g" 
+        )
+    )
+  
+  what <- "unit_for_irpeat"
+  res[[what]]
+  
+}
+
+
+#' Target variable names for plotting and printing
+#'
+#' @param what Character value. One of `target_variable_name_html_short`, 
+#' `target_variable_name_latex_short`, `target_variable_name_latex_long`.
+#'
+#' @export
+irp_get_names_target_variables <- function(x, what) {
+  
+  res <- 
+    tibble::tibble(
+      target_variable = x
+    ) |>
+    dplyr::mutate(
+      target_variable_name_html_short =
+        dplyr::case_when(
+          target_variable == "carbon_content" ~ "C",
+          target_variable == "nitrogen_content" ~ "N",
+          target_variable == "oxygen_content" ~ "O",
+          target_variable == "hydrogen_content" ~ "H",
+          target_variable == "phosphorus_content" ~ "P",
+          target_variable == "sulfur_content" ~ "S",
+          target_variable == "potassium_content" ~ "K",
+          target_variable == "titanium_content" ~ "Ti",
+          target_variable == "silicon_content" ~ "Si",
+          target_variable == "calcium_content" ~ "Ca",
+          target_variable == "d13C" ~ "&delta;<sup>13</sup>C",
+          target_variable == "d15N" ~ "&delta;<sup>15</sup>N",
+          target_variable == "nosc" ~ "NOSC",
+          target_variable == "dgf0" ~ "&Delta;G<sup>0</sup><sub>f</sub>",
+          target_variable == "loss_on_ignition" ~ "LOI",
+          target_variable == "bulk_density" ~ "BD",
+          target_variable == "C_to_N" ~ "C/N",
+          target_variable == "O_to_C" ~ "O/C",
+          target_variable == "H_to_C" ~ "H/C" 
+        ),
+      target_variable_name_latex_short =
+        dplyr::case_when(
+          target_variable == "carbon_content" ~ "C",
+          target_variable == "nitrogen_content" ~ "N",
+          target_variable == "oxygen_content" ~ "O",
+          target_variable == "hydrogen_content" ~ "H",
+          target_variable == "phosphorus_content" ~ "P",
+          target_variable == "sulfur_content" ~ "S",
+          target_variable == "potassium_content" ~ "K",
+          target_variable == "titanium_content" ~ "Ti",
+          target_variable == "silicon_content" ~ "Si",
+          target_variable == "calcium_content" ~ "Ca",
+          target_variable == "d13C" ~ "$\\delta^{13}$C",
+          target_variable == "d15N" ~ "$\\delta^{15}$N",
+          target_variable == "nosc" ~ "NOSC",
+          target_variable == "dgf0" ~ "$\\Delta\\text{G}_\\text{f}^0$",
+          target_variable == "loss_on_ignition" ~ "LOI",
+          target_variable == "bulk_density" ~ "BD",
+          target_variable == "C_to_N" ~ "C/N",
+          target_variable == "O_to_C" ~ "O/C",
+          target_variable == "H_to_C" ~ "H/C" 
+        ),
+      target_variable_name_latex_long =
+        dplyr::case_when(
+          target_variable == "carbon_content" ~ "C",
+          target_variable == "nitrogen_content" ~ "N",
+          target_variable == "oxygen_content" ~ "O",
+          target_variable == "hydrogen_content" ~ "H",
+          target_variable == "phosphorus_content" ~ "P",
+          target_variable == "sulfur_content" ~ "S",
+          target_variable == "potassium_content" ~ "K",
+          target_variable == "titanium_content" ~ "Ti",
+          target_variable == "silicon_content" ~ "Si",
+          target_variable == "calcium_content" ~ "Ca",
+          target_variable == "d13C" ~ "$\\delta^{13}$C",
+          target_variable == "d15N" ~ "$\\delta^{15}$N",
+          target_variable == "nosc" ~ "NOSC",
+          target_variable == "dgf0" ~ "$\\Delta\\text{G}_\\text{f}^0$",
+          target_variable == "loss_on_ignition" ~ "Loss on ignition",
+          target_variable == "bulk_density" ~ "Bulk density",
+          target_variable == "C_to_N" ~ "C/N",
+          target_variable == "O_to_C" ~ "O/C",
+          target_variable == "H_to_C" ~ "H/C" 
+        )
+    )
+  
+  res[[what]]
+  
+}
+
+
+#' Returns the order of target variables
+#' 
+#' @export
+irp_get_order_target_variables <- function(x) {
+  
+  res <- 
+    tibble::tibble(
+      target_variable = x
+    ) |>
+    dplyr::mutate(
+      index =
+        dplyr::case_when(
+          target_variable == "carbon_content" ~ 1,
+          target_variable == "nitrogen_content" ~ 3,
+          target_variable == "oxygen_content" ~ 4,
+          target_variable == "hydrogen_content" ~ 2,
+          target_variable == "phosphorus_content" ~ 6,
+          target_variable == "sulfur_content" ~ 5,
+          target_variable == "potassium_content" ~ 7,
+          target_variable == "titanium_content" ~ 10,
+          target_variable == "silicon_content" ~ 8,
+          target_variable == "calcium_content" ~ 9,
+          target_variable == "d13C" ~ 11,
+          target_variable == "d15N" ~ 12,
+          target_variable == "nosc" ~ 13,
+          target_variable == "dgf0" ~ 14,
+          target_variable == "loss_on_ignition" ~ 19,
+          target_variable == "bulk_density" ~ 18,
+          target_variable == "C_to_N" ~ 15,
+          target_variable == "O_to_C" ~ 16,
+          target_variable == "H_to_C" ~ 17,
+          target_variable == "macroporosity" ~ 20,
+          target_variable == "non_macroporosity" ~ 21,
+          target_variable == "volume_fraction_solids" ~ 22,
+          target_variable == "saturated_hydraulic_conductivity" ~ 23,
+          target_variable == "specific_heat_capacity" ~ 24,
+          target_variable == "dry_thermal_conductivity" ~ 25
+        )
+    ) |>
+    dplyr::pull(index)
+  
+  res
+  
+}
+
+#' Defines the number of digits for rounding
+#' 
+#' @export
+irp_get_rounding_digits_target_variables <- function(x) {
+  
+  res <- 
+    tibble::tibble(
+      target_variable = x
+    ) |>
+    dplyr::mutate(
+      index =
+        dplyr::case_when(
+          target_variable == "carbon_content" ~ 2,
+          target_variable == "nitrogen_content" ~ 3,
+          target_variable == "oxygen_content" ~ 2,
+          target_variable == "hydrogen_content" ~ 2,
+          target_variable == "phosphorus_content" ~ 0,
+          target_variable == "sulfur_content" ~ 0,
+          target_variable == "potassium_content" ~ 0,
+          target_variable == "titanium_content" ~ 0,
+          target_variable == "silicon_content" ~ 2,
+          target_variable == "calcium_content" ~ 3,
+          target_variable == "d13C" ~ 1,
+          target_variable == "d15N" ~ 1,
+          target_variable == "nosc" ~ 1,
+          target_variable == "dgf0" ~ 1,
+          target_variable == "loss_on_ignition" ~ 2,
+          target_variable == "bulk_density" ~ 2,
+          target_variable == "C_to_N" ~ 1,
+          target_variable == "O_to_C" ~ 3,
+          target_variable == "H_to_C" ~ 3 
+        )
+    ) |>
+    dplyr::pull(index)
+  
+  res
   
 }
 
@@ -212,6 +590,33 @@ irp_atom_fraction_to_delta <- function(x, r) {
   
   x <- x*100
   -1000*(1-x/((100-x)*r))
+}
+
+
+#### Helper functions for the paper ####
+
+#' Formats author list
+#' 
+#' @export
+irp_make_author_list <- function(x) {
+  
+  purrr::map_chr(x, function(.x) {
+    paste0(.x$name, "$^{\\text{", .x$affil, "}}$")
+  }) |>
+    paste(collapse = "  \n")
+  
+}
+
+#' Formats affiliation list
+#' 
+#' @export
+irp_make_affiliation_list <- function(x) {
+  
+  purrr::map_chr(x, function(.x) {
+    paste0("$^{", .x$number, "}$ ", .x$text)
+  }) |>
+    paste(collapse = "  \n")
+  
 }
 
 

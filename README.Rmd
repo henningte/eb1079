@@ -1,0 +1,60 @@
+---
+output: github_document
+bibliography: references.bib
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Compendium of R code and data for "Prediction of Peat Properties from Transmission Mid-Infrared Spectra in the Peatland Mid-Infrared Spectra Database"
+
+This repository contains the data and code for our manuscript:
+
+Teickner, H., & Knorr, K.-H. (2025). Prediction of peat Properties from transmission mid-infrared spectra in the Peatland Mid-Infrared Spectra Database. (unpublished).
+
+### How to cite
+
+Please cite this compendium as:
+
+> Henning Teickner and Klaus-Holger Knorr, (`r format(Sys.Date(), "%Y")`). Compendium of R code and data for "Prediction of peat Properties from transmission mid-infrared spectra in the Peatland Mid-Infrared Spectra Database". Accessed `r format(Sys.Date(), "%d %b %Y")`. <https://github.com/henningte/eb1079>
+
+### How to use
+
+Instructions how to set up the Docker containers to reproduce the computations are available from the Dockerfile. The Dockerfile also provides instructions to run the [`targets`](https://github.com/ropensci/targets) workflow to reproduce all computations and eventually the manuscript and supporting information.
+
+### Licenses
+
+**Text and figures :**  [CC-BY-4.0](http://creativecommons.org/licenses/by/4.0/)
+
+**Code :** See the [DESCRIPTION](DESCRIPTION) file
+
+**Data :** [CC-0](http://creativecommons.org/publicdomain/zero/1.0/) attribution requested in reuse. See the sources section for licenses for data derived from external sources and how to give credit to the original author(s) and the source.
+
+
+### Sources
+
+Data in folder `data/raw_data` are derived from different sources. To use these data and give credit to data authors, please follow the following information:
+
+- [:file\_folder: d9.rds](data/raw_data/d9.rds): This file contains data values (porosity and bulk density of organic shales) extracted from Fig. 4 in @Wang.2015b.  
+- [:file\_folder: caldat-wittington2024](data/raw_data/caldat-wittington2024): This folder contains data values (bulk density, porosity, saturated hydraulic conductivity) extracted from Fig. 1 and 3 from @Whittington.2024.  
+- [:file\_folder: CHNOSZ](data/raw_data/CHNOSZ): This folder contains additional data for P$_4$O$_10$ to be included in the 'OBIGT' database from the R package 'CHNOSZ' [@Dick.2019]. These additional data values are derived from https://webbook.nist.gov/cgi/cbook.cgi?ID=C16752606&Mask=6F [@Linstrom.1997].  
+- [:file\_folder: dry_thermal_conductivity](data/raw_data/dry_thermal_conductivity): This folder contains corrected versions of the supporting data from @OConnor.2020 which I received via email from Prof. Cardenas.  
+- [:file\_folder: pmird](data/raw_data/pmird): This is a template folder in which the folder `pmird_prepared_data` from the pmird database needs to be stored to reproduce the computations. This folder is available from https://doi.org/10.5281/zenodo.17092587.
+- [:file\_folder: specific_heat_capacity](data/raw_data/specific_heat_capacity): This folder contains the supporting data from @Gnatowski.2022.
+
+### Contributions
+
+We welcome contributions from everyone. Please note that the eb1079 project is released with a [Contributor Code of Conduct](https://contributor-covenant.org/version/2/0/CODE_OF_CONDUCT.html). By contributing to this project, you agree to abide by its terms.
+
+### Funding
+
+This study was funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) grant no. KN 929/23-1 to Klaus-Holger Knorr and grant no. PE 1632/18-1 to Edzer Pebesma.
+
+### References
+

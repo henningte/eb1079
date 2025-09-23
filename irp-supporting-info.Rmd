@@ -1,0 +1,562 @@
+---
+title: "Supporting information to: `r rmarkdown::yaml_front_matter('irp-paper.Rmd')$title`"
+# subtitle: Do you have a subtitle? If so, write it here
+# titlerunning: Short form of title (if too long for head)
+# authorrunning: Short form of author list if too long for running head
+authors:
+  - name: Henning Teickner
+    affil: '1,2,*'
+    email:
+  - name: Klaus-Holger Knorr
+    affil: '1'
+    email:
+#  - name: Alice Author
+#    affil: "1,**"
+#    email: alice@doe.com
+#  - name: Bob Author
+#    affil: "1,**"
+#    email: bob@doe.com
+#  - name: Christine Author
+#    affil: "1,2"
+#    email: christine@doe.com
+#  - name: Derek Author
+#    affil: "2,*"
+#    email: derek@doe.com
+#
+affiliations:
+  - number: 1
+    text: "Ecohydrology & Biogeochemistry Group, Institute of Landscape Ecology, University of Münster, 48149, Germany"
+  - number: 2
+    text: "Spatiotemporal Modelling Lab, Institute for Geoinformatics, University of Münster, 48149, Germany"
+#  - number: "**"
+#    text: "these authors contributed equally to this work"
+  - number: "*"
+    text: "corresponding author(s): Henning Teickner (henning.teickner@uni-muenster.de)"
+#
+keywords:
+- key
+- dictionary
+- word
+
+#PACS: 
+#- PAC1
+#- superPAC
+
+bibliography: '`r targets::tar_read(irp_references_file)`'
+#biblio-style: "naturemag-doi"
+# bibstyle options spbasic(default), spphys, spmpsci
+csl: copernicus-publications.csl
+output: 
+  bookdown::pdf_document2:
+    toc: true
+    keep_tex: true
+    number_sections: true
+fontsize: 12pt
+link-citations: true
+header-includes:
+  - \usepackage{float}
+  - \usepackage{booktabs}
+  - \usepackage{multirow}
+  - \usepackage[version=4]{mhchem}
+  - \usepackage[modulo]{lineno}
+  - \linenumbers
+  - \usepackage{xr} \externaldocument[main-]{irp-paper}
+---
+
+\renewcommand{\thefigure}{S\arabic{figure}} 
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\thesection}{S\arabic{section}}
+\renewcommand{\theequation}{S\arabic{equation}}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, fig.align='center', fig.pos = 'H')
+```
+
+```{r packages, include=FALSE}
+library(knitr)
+library(kableExtra)
+library(pmird)
+library(targets)
+library(magrittr)
+library(bib2df)
+```
+
+
+```{r}
+targets::tar_source()
+targets::tar_load(irp_db_obigt_organic)
+targets::tar_load(irp_m1)
+targets::tar_load(irp_d_battley_1999_table_1)
+targets::tar_load(irp_table_3)
+```
+
+
+```{r, results='asis'}
+cat(irp_make_author_list(rmarkdown::metadata$authors))
+cat("  \n")
+cat("  \n")
+cat(irp_make_affiliation_list(rmarkdown::metadata$affiliations))
+```
+
+
+# Pedotransfer functions {#irp-sup-perdotransfer-functions}
+
+## Total porosity, macroporosity {#methods-target-variables-porosity}
+
+Total porosity is defined as the volume fraction of a peat sample which is filled either with gas or water. Macroporosity is defined, following @Liu.2019, as the difference between total porosity and the volumetric water content at 60 cm pressure head (implying a pore diameter of ~ 50 µm).  
+The pmird database does not contain measured peat porosities and MIRS measured for the same samples. However, both can in principle be predicted from peat bulk density, even though prediction errors of such pedotransfer functions are large [@Liu.2019; @Liu.2020], especially in combination with prediction errors for bulk densities from the MIRS prediction model.  
+We nevertheless think that computing such models is useful because it is still better to have a rough estimate than no estimate, our approach provides software infrastructure to combine pedotransfer functions and spectral prediction models, and it is easier to test the usefulness of both the spectral prediction model and the pedotransfer function when such combined models are available.  
+The pmird database contains the data collected by @Liu.2019 and we computed a modified version of their models for the volume fractions of different pore classes. Our model has the following structure:
+
+\begin{equation}
+\begin{aligned}
+  \begin{bmatrix}
+y_\text{macropores}\\
+y_\text{non-macropores}\\
+y_\text{solids}
+\end{bmatrix} & \sim & \text{Dirichlet}\left(
+\begin{bmatrix}
+\mu_\text{macropores}\\
+\mu_\text{non-macropores}\\
+\mu_\text{solids}
+\end{bmatrix}, \phi
+\right)   \\
+\mu_\text{macropores} & = & \frac{\exp(\eta_\text{macropores})}{\sum_{k \in \{\text{macropores, non-macropores, solids}\}} \exp(\eta_k)}\\
+\mu_\text{non-macropores} & = & \frac{\exp(\eta_\text{non-macropores})}{\sum_{k \in \{\text{macropores, non-macropores, solids}\}} \exp(\eta_k)}\\
+\mu_\text{solids} & = & \frac{\exp(\eta_\text{solids})}{\sum_{k \in \{\text{macropores, non-macropores, solids}\}} \exp(\eta_k)}\\
+\eta_\text{macropores} & = & \alpha_\text{macropores}  + \beta_\text{1, macropores} x + \beta_\text{2, macropores} \ln(x)\\
+\eta_\text{non-macropores} & = & \alpha_\text{non-macropores} + \beta_\text{1, non-macropores} x + \beta_\text{2, non-macropores} \ln(x)\\
+\eta_\text{solids} & = & 0\\
+\alpha_\text{macropores} & \sim & \text{normal}(\mu_{\alpha_\text{macropores}}, \sigma_{\alpha_\text{macropores}}) \\
+\alpha_\text{non-macropores} & \sim & \text{normal}(\mu_{\alpha_\text{non-macropores}}, \sigma_{\alpha_\text{non-macropores}}) \\
+\beta_\text{1, macropores} & \sim & \text{normal}(\mu_{\beta_\text{1, macropores}},
+\sigma_{\beta_\text{1, macropores}}) \\
+\beta_\text{2, macropores} & \sim & \text{normal}(\mu_{\beta_\text{2, macropores}}, \sigma_{\beta_\text{2, macropores}}) \\
+\beta_\text{1, non-macropores} & \sim & \text{normal}(\mu_{\beta_\text{1, non-macropores}}, \sigma_{\beta_\text{1, non-macropores}}) \\
+\beta_\text{2, non-macropores} & \sim & \text{normal}(\mu_{\beta_\text{2, non-macropores}}, \sigma_{\beta_\text{2, non-macropores}}) \\
+\phi & \sim & \text{gamma}(\alpha_{\phi}, \beta_{\phi}),
+  (\#eq:liu-porosity-1)
+\end{aligned}
+\end{equation}
+
+where $\mu_\text{k}$ is the average volume fraction of compartment $k$, $k \in \{\text{macropores, non-macropores, solids}\}$, $\eta_\text{k}$ is the same, but on the latent scale, $\alpha_\text{macropores}$,  $\alpha_\text{non-macropores}$, $\beta_\text{1, macropores}$, $\beta_\text{2, macropores}$, $\beta_\text{1, non-macropores}$, and $\beta_\text{2, non-macropores}$ are the intercept and slopes to model the average volume fraction of macropores and non-macropores from the bulk density ($x$), respectively, which are modeled with normal prior distributions, and $\phi$ is the precision parameter of the Dirichlet distribution, assumed to have a gamma distribution. Solids serve as reference class and therefore have $\eta_\text{solids} = 0$.  
+
+The modifications are the following:
+
+1. Instead of modelling macroporosity and non-macroporosity separately, we model them simultaneously using a Dirichlet regression model which also models the volume fraction of solids. This considers that the volume fractions of macropores, non-macro pores, and solid matter each cannot be smaller than 0% or larger than 100% and must sum to 100%. 
+
+2. Instead of using simple linear or exponential relations of each class with bulk density, we model macroporosity and non-macroporosity with a Ricker-like model [@Ricker.1954], i.e. $\eta_k = \alpha + x\beta_{1, k} + \ln(x)\beta_{2, k}$. Apart from better fitting the data than a simple linear or exponential model, a Ricker-like model makes intuitively sense: 
+    - A reasonable assumption is that the total porosity must decrease with increasing bulk density, as shown in @Liu.2019 and also observable for organic shales (extremely compacted organic sediments, see modification 3 below) [@Wang.2015b], because otherwise one would have to assume that the total porosity could increase or remain constant while the bulk density increases, which would only be possible if low density solids would be replaced by high density solids without changing or while increasing the total porosity --- an unlikely scenario. The $\ln(x)\beta_{2, k}$ terms account for this assumption.
+    - Peat mass loss during decomposition is assumed to be proportional to the remaining mass and therefore can be modeled with an exponential function [e.g., @Clymo.1984]. Similarly, we assume that the loss of macropores is proportional to the fraction of remaining macropores because more macropores imply more fibers which form the boundaries of macropores and these fibers get decomposed by losing mass. If one then assumes that the loss of macropores occurs at a higher rate than the loss of peat mass --- because compaction happens faster than mass loss --- this implies a decreasing exponential relation of macroporosity with bulk density, as shown in @Liu.2019. The $x\beta_{1, k}$ term account for this. 
+    - This relatively simple model can also account for the decrease in non-macroporosity with increasing bulk densities (Fig. \@ref(fig:irp-plot-7)).
+    - When the bulk density approaches zero, a sample is in principle the content of a container filled with gas, i.e. the sample is a single macropore (if one considers a sample with sufficiently large volume). The model is in accordance with this because at a very small bulk density, it predicts a macroporosity of 100%, a non-macroporosity of 0%, and a fraction of solids of 0%. Likewise, for very high bulk densities, the model predicts a macroporosity of 0%, a non-macroporosity of 0%, and a fraction of solids of 100% (Fig. \@ref(fig:irp-plot-7)).
+
+3. We added data from organic shales extracted from table 2 in @Wang.2015b to the model. As described above, organic shales may be formed from peat-like material due to extreme compaction [@Wang.2015b] and a model which captures the general relation between porosity and bulk density, should also fit data for organic shales as one extreme (high bulk density and low porosity) [@Wang.2015b]. Including such high-bulk density data allows us to make the assumption that this model can be applied both to very low-density, but also very high-density peat samples.  
+The porosity values reported by @Wang.2015b represent total porosities and no easily extractable data for the macroporosity and non-macroporosity are given. Since the fraction of macropores in these organic shales is small (see Fig. 5 in @Wang.2015b), we assumed a macroporosity of 0% or, equivalently, that the porosity data reported equals the non-macroporosity.
+
+In accordance with the theoretical justifications, we chose prior distributions for the intercept that reflect that the macroporosity should be 100%, the non-macroporosity 0%, and the fraction of solids 0% when the bulk density goes to 0 g cm$^{-3}$. For all other parameters, we used weakly informative priors. Model fits to the data are shown in Fig. \@ref(fig:irp-plot-6). As additional test, we compared model predictions for total porosity to measurements by @Whittington.2024. Predictions of our model agree within prediction interval boundaries to the measured values (Fig. \@ref(fig:irp-plot-21)).
+
+(ref:irp-plot-7-caption) Plot of measured (points) and predicted (lines and shaded areas) total porosity, macroporosity, non-macroporosity, and volume fraction of solids versus bulk density. Shaded areas are prediction intervals. Data from organic shales are from @Wang.2015b and data from peat samples are from @Liu.2019 as contained in the pmird database.
+
+```{r irp-plot-7, fig.cap='(ref:irp-plot-7-caption)', out.width="80%"}
+knitr::include_graphics(tar_read(irp_plot_7))
+```
+
+(ref:irp-plot-6-caption) Plot of measured (or assumed) total porosity, macroporosity, non-macroporosity, and volume fraction of solids versus predictions by model \@ref(eq:liu-porosity-1). Error bars are 95% prediction intervals.
+
+```{r irp-plot-6, fig.cap='(ref:irp-plot-6-caption)', out.width="80%"}
+knitr::include_graphics(tar_read(irp_plot_6))
+```
+
+(ref:irp-plot-21-caption) Comparison of model predictions for total porosity to measured total porosities for peat cores from @Whittington.2024. Each panel shows values for one peat core. Lines are averages. Shaded areas are 95% prediction intervals.
+
+```{r irp-plot-21, fig.cap='(ref:irp-plot-21-caption)', out.width="80%"}
+knitr::include_graphics(tar_read(irp_plot_21))
+```
+
+
+## Saturated hydraulic conductivity ($K_s$)
+
+As for porosity, the pmird database does not contain measured peat saturated hydraulic conductivity ($K_s$) and MIRS measured for the same samples, but pedotransfer functions are available to predict it from bulk densities [@Liu.2019]. To predict $K_s$ from MIRS, we used the same strategy as for porosity, again recomputing modified versions of the model described in @Liu.2019.  
+Values of $K_s$ are highly variable for small bulk densities [@Liu.2019] because they do not just depend on porosity, but also factors such as pore connectivity. However, peat with a small fraction of macropores (or equivalently a bulk density approximately $> 0.15$ g cm$^{-3}$) generally has a small $K_s$ [@Liu.2019]. The simple model we present therefore is informative in so far as it makes accurate predictions when $K_s$ is small, but it does not provide very accurate estimates for peat with bulk densities approximately $\le 0.15$ g cm$^{-3}$. As described for porosity above, we nevertheless think that it is useful to compute such a model.  
+Again, we modified the original model for $K_s$ to model $K_s$ on the original scale (not log-scaled). In addition, we modeled $K_s$ with a beta regression model, assuming that $K_s$ is in (0, 3000) cm h$^{-1}$ [@Liu.2019]. This has mainly the advantage to restrict the maximum error ranges in comparison to using a gamma distribution:
+
+\begin{equation}
+\begin{aligned}
+K_s & \sim & \text{beta}(\mu \phi, (1 - \mu)\phi)\\
+\mu & = & \frac{1}{1 + \exp(-\eta)}\\
+\eta & = & \alpha_\mu + \beta_{1, \mu} x + \beta_{2, \mu} \ln(x)\\
+\alpha_\mu & \sim & \text{normal}(\mu_{\alpha_\mu}, \sigma_{\alpha_\mu})\\
+\beta_{1, \mu} & \sim & \text{normal}(\mu_{\beta_{1, \mu}}, \sigma_{\beta_{1, \mu}})\\
+\beta_{2, \mu} & \sim & \text{normal}(\mu_{\beta_{2, \mu}}, \sigma_{\beta_{2, \mu}})\\
+\phi & = & \exp(\alpha_\phi + \beta_{1,\phi} x + \beta_{2,\phi} \ln(x))\\
+\alpha_\phi & \sim & \text{normal}(\mu_{\alpha_\phi}, \sigma_{\alpha_\phi})\\
+\beta_{1,\phi} & \sim & \text{normal}(\mu_{\beta_{1,\phi}}, \sigma_{\beta_{1,\phi}})\\
+\beta_{2,\phi} & \sim & \text{normal}(\mu_{\beta_{2,\phi}}, \sigma_{\beta_{2,\phi}}),
+(\#eq:liu-ks-1)
+\end{aligned}
+\end{equation}
+
+where $\mu$ is the average saturated hydraulic conductivity, $\phi$ the precision parameter of the beta distribution, $\alpha_\mu$, $\beta_{1, \mu}$, and $\beta_{2, \mu}$ are the intercept and slopes for the model for $\mu$ in dependency of the bulk density ($x$), all modeled with normal prior distributions, and $\alpha_\phi$ and $\beta_\phi$ are the intercept and slope for the model for $\phi$ in dependency of the bulk density, which are also modeled with normal prior distributions.  
+Since $K_s$ depends on porosity, we used the same model for the average bulk density, i.e. $\mu = \alpha + \beta_1x + \beta_2 \log(x)$ (see above). Also the variability in $K_s$ (modeled by $\phi$) is related to bulk density and therefore we included a model term for $\phi$ in dependency of the bulk density in the model. Since one can expect that $K_s$ is similarly small for peat with even higher bulk densities than contained in the data from @Liu.2019, we assume that this model can be used across the full range of bulk densities for peat. Plots of measured and predicted $K_s$ versus bulk density are shown in Fig. \@ref(fig:irp-plot-8) and measurements versus fitted values in Fig. \@ref(fig:irp-plot-9). As additional test, we compared model predictions to measurements by @Whittington.2024 and predictions of model 1 from @Morris.2022 (Fig. \@ref(fig:irp-plot-21)). Predictions of our model agree within prediction interval boundaries to the measured values, but the predicted average is larger than the measurements and our predictions agree better with predictions from model 1 from @Morris.2022 than with measurements from @Whittington.2024.   
+
+(ref:irp-plot-8-caption) Plot of measured $K_s$ versus predictions by model \@ref(eq:liu-ks-1), either on the raw scale or the $\log_{10}$-transformed values. Error bars are 95% prediction intervals.
+
+```{r irp-plot-8, fig.cap='(ref:irp-plot-8-caption)', out.width="80%"}
+knitr::include_graphics(tar_read(irp_plot_8))
+```
+
+(ref:irp-plot-9-caption) Plot of measured (points) and predicted (lines and shaded areas) $K_s$, either on the raw scale or the $\log_{10}$-transformed values. Shaded areas are prediction intervals.
+
+```{r irp-plot-9, fig.cap='(ref:irp-plot-9-caption)', out.width="80%"}
+knitr::include_graphics(tar_read(irp_plot_9))
+```
+
+(ref:irp-plot-22-caption) Comparison of model predictions for saturated hydraulic conductivity to measured saturated hydraulic conductivity for peat cores from @Whittington.2024 and saturated hydraulic conductivity predicted for the same cores with model 1 from @Morris.2022. Each panel shows values for one peat core. Lines are averages. Shaded areas are 95% prediction intervals.
+
+```{r irp-plot-22, fig.cap='(ref:irp-plot-22-caption)', out.width="80%"}
+knitr::include_graphics(tar_read(irp_plot_22))
+```
+
+## Specific heat capacity ($c_p$) {#methods-target-variables-specific-heat-capacity}
+
+The pmird database does not contain measured peat specific heat capacities and MIRS measured for the same samples. However, peat specific heat capacities can be modeled from peat N contents if the peat temperature is known [@Gnatowski.2022].  
+We therefore modeled the specific heat capacity from MIRS by predicting peat N contents from MIRS and then using the approach described in @Gnatowski.2022. We recomputed the models described there with the reported data and some modifications:
+
+\begin{equation}
+\begin{aligned}
+  c_{p,\text{measured}} & \sim & \text{normal}(c_{p},\sigma_{c_p})\\
+  c_{p} & \sim & \text{gamma}\left(\phi, \frac{\phi}{\mu_{c_p}} \right)\\
+  \mu_{c_p} & = & \exp(\alpha_{C_0}[i] + \beta_{C_0}\text{N} + \alpha_{C_1}\text{T} + \beta_{C_1}\text{NT})\\
+  \alpha_{C_0}[i] & \sim & \text{normal}(\alpha, \sigma)\\
+  \sigma & \sim & \text{normal}^+(0, 0.2)\\
+  \phi & \sim & \text{gamma}(1, 0.005),
+  (\#eq:gnatowski-specific-heat-capacity-1)
+\end{aligned}
+\end{equation}
+
+where $c_p$ is the true specific heat capacity (J g$^{-1}$ K$^{-1}$), $c_{p,\text{measured}}$ the measured specific heat capacity (J g$^{-1}$ K$^{-1}$) with reported measurement errors $\sigma_{c_p}$ [@Gnatowski.2022], $\mu_{c_p}$ the expected value of the specific heat capacity (J g$^{-1}$ K$^{-1}$), $\alpha_{C_0}[i]$ is $\mu_{c_p}$ for $\text{T}=0$ K and a solid N content of 0 mass-% (equivalent to the intercept for $C_0$ in @Gnatowski.2022), $\beta_{C_0}$ describes how $\mu_{c_p}$ changes with N content (equivalent to the slope for $C_0$ in @Gnatowski.2022), $\alpha_{C_1}$ is the change in $\mu_{c_p}$ with temperature (equivalent to the intercept for $C_1$ in @Gnatowski.2022), $\beta_{C_1}$ describe how $\mu_{c_p}$ changes with temperature and N content (equivalent to the slope for $C_1$ in @Gnatowski.2022). $\alpha$ and $\sigma$ are the global intercept and standard deviation for the $\alpha_{C_0}[i]$, to account for the repeated measurements per sample.  
+The modifications consider that $c_p>0$ J g$^{-1}$ K$^{-1}$ (gamma distribution), propagate errors in $C_0$ and $C_1$ as predicted from N content to $c_p$, and consider measurement errors in $c_p$. In addition, to account for repeated measurements of the heat capacity for each peat sample at different temperatures, we model $\alpha_{C_0}[i]$ with a normal distribution with global intercept $\alpha$ and standard deviation $\sigma$. Parameter $\alpha$ was set to $\log(c_p(\text{air}))$, where $c_p(\text{air})$ is the specific heat capacity of dry air at 0 K.  
+The data in @Gnatowski.2022 are from drained peat and therefore are not representative for less decomposed peat. To extent the model to less decomposed peat, we use data for the specific heat capacity of dry air from @Hilsenrath.1955. Undecomposed peat is known to have lower N contents and larger pore spaces. The larger the porosity is the more is the specific heat capacity of dry peat controlled by that of the enclosed air. Therefore, we used the data for the specific heat capacity of dry air as estimate for the specific heat capacity of an undecomposed peat sample with a total N content of 0 mass-%. This allowed us to predict the specific heat capacity of a peat sample from its MIRS by using the spectral prediction model for peat N content to predict the N content for the peat sample and inserting this into equations \@ref(eq:gnatowski-specific-heat-capacity-1) together with the (known) peat temperature.  
+Plots of measured and predicted $c_p$ versus N content are shown in Fig. \@ref(fig:irp-plot-10) and measurements versus fitted values in Fig. \@ref(fig:irp-plot-11).
+
+(ref:irp-plot-10-caption) Plot of measured $c_p$ versus predictions by model \@ref(eq:gnatowski-specific-heat-capacity-1). Error bars are 95% prediction intervals.
+
+```{r irp-plot-10, fig.cap='(ref:irp-plot-10-caption)', out.width="80%"}
+knitr::include_graphics(tar_read(irp_plot_10))
+```
+
+(ref:irp-plot-11-caption) Plot of measured (points) and predicted (lines and shaded areas) $c_p$. Shaded areas are prediction intervals and error bars represent measurement errors.
+
+```{r irp-plot-11, fig.cap='(ref:irp-plot-11-caption)', out.width="80%"}
+knitr::include_graphics(tar_read(irp_plot_11))
+```
+
+
+## Dry thermal conductivity ($K_\text{T}$) {#methods-target-variables-dry-thermal-conductivity}
+
+The pmird database does not contain measured peat dry thermal conductivity and MIRS measured for the same samples. However, peat dry thermal conductivity can be modeled from peat bulk density [@OConnor.2020].  
+We therefore modeled the dry thermal conductivity from MIRS by predicting peat bulk density from MIRS and then using the model from @OConnor.2020. We recomputed the model described there with data received from the authors of @OConnor.2020 via email as the data included in the supporting information to @OConnor.2020 were incomplete and some modifications:
+    
+\begin{equation}
+\begin{aligned}
+K_\text{T} & \sim & \text{gamma}\left(\phi, \frac{\phi}{\mu_{K_\text{T}}} \right)\\
+\mu_{K_\text{T}} & = & \exp(\alpha_{\mu} + \beta_{\mu,1}\rho + \beta_{\mu,2}\log(\rho))\\
+\phi & = & \exp(\alpha_{\phi} + \beta_{\phi,1}\rho + \beta_{\phi,2}\log(\rho)), 
+(\#eq:oconnor-dry-thermal-conductivity-1)
+\end{aligned}
+\end{equation}
+ 
+where $K_\text{T}$ is the dry thermal conductivity (W m$^{-1}$ K$^{-1}$), $\mu_{K_\text{T}}$ is the expected dry thermal conductivity (W m$^{-1}$ K$^{-1}$), $\alpha_{\mu}$ is the intercept, $\beta_{\mu,1}$ and $\beta_{\mu,2}$ are the slopes of the relation with $\rho$ and $\log(\rho)$, and $\rho$ is the bulk density (g cm$^{-3}$). The shape parameter of the gamma distribution, $\phi$, was modeled with a similar model (in dependency of bulk density) since the prediction standard deviation  was less than expected based on a gamma distribution with constant shape parameter. The modifications consider that $K_\text{T}$ is $>0$ W m$^{-1}$ K$^{-1}$.  
+This allowed us to predict the dry thermal conductivity of a peat sample from its MIRS by using the spectral prediction model for peat bulk density to predict the bulk density for the peat sample and inserting this into equation \@ref(eq:oconnor-dry-thermal-conductivity-1). Plots of measured and predicted $K_\text{T}$ versus bulk density are shown in Fig. \@ref(fig:irp-plot-12) and measurements versus fitted values in Fig. \@ref(fig:irp-plot-13).
+
+(ref:irp-plot-12-caption) Plot of measured $K_\text{T}$ versus predictions by model \@ref(eq:oconnor-dry-thermal-conductivity-1). Error bars are 95% prediction intervals.
+
+```{r irp-plot-12, fig.cap='(ref:irp-plot-12-caption)', out.width="80%"}
+knitr::include_graphics(tar_read(irp_plot_12))
+```
+
+(ref:irp-plot-13-caption) Plot of measured (points) and predicted (lines and shaded areas) $K_\text{T}$. Shaded areas are prediction intervals.
+
+```{r irp-plot-13, fig.cap='(ref:irp-plot-13-caption)', out.width="80%"}
+knitr::include_graphics(tar_read(irp_plot_13))
+```
+
+
+# Estimating the standard Gibbs free energy of formation ($\Delta\text{G}_\text{f}^0$) from elemental contents {#irp-sup-dgf0}
+
+## Modeling approach {#irp-sup-dgf0-modeling-approach}
+
+The pmird database does not contain $\Delta\text{G}_\text{f}^0$ values. However, several procedures have been proposed to compute $\Delta\text{G}_\text{f}^0$ of organic matter (mixtures) with unknown molecular formula from its stoichiometry [see e.g., @Popovic.2019]. Such an approach can be applied to peat samples from the pmird database with measured C, H, O, N contents to estimate $\Delta\text{G}_\text{f}^0$. To this end, we here combine the approaches suggested in @Thornton.1917, @Patel.1981, and @Battley.1999 to compute $\Delta\text{G}_\text{f}^0$, as explained in detail in @Popovic.2019.  
+The standard Gibbs free energy of a sample ($\Delta \text{G}_{\text{f}, \text{sample}}^0$) can be computed from the enthalpy of formation and the entropy of formation, using the Gibbs equation [@Battley.1999; @Popovic.2019]:
+
+\begin{equation}
+  \Delta \text{G}_{\text{f}, \text{sample}}^0 = \Delta \text{H}_{\text{f}, \text{sample}}^0 - \text{T} \Delta \text{S}_{\text{f}, \text{sample}}^0 ,
+  (\#eq:gibbs-energy-of-formation-1)
+\end{equation}
+
+where $\text{T} = 298.15$ K is the temperature under standard conditions, $\Delta \text{H}_{\text{f}, \text{sample}}^0$ the standard enthalpy of formation of the peat sample (kJ mol$_\text{C}^{-1}$), and $\Delta \text{S}_{\text{f}, \text{sample}}^0$ the standard entropy of formation of the peat sample (J mol$_\text{C}^{-1}$ K$^{-1}$). The equation is also valid for values normalized to the molar C content (which is a premise in case of peat because we do not know the individual molecular formulas).  
+$\Delta \text{H}_{\text{f}, \text{sample}}^0$ and $\Delta \text{S}_{\text{f}, \text{sample}}^0$ can both be derived from the stoichiometry of peat samples [@Thornton.1917; @Patel.1981; @Battley.1999; @Popovic.2019], as explained in the two next subsections and described by @Popovic.2019. In a third subsection, we describe how uncertainties in estimated $\Delta \text{H}_{\text{f}, \text{sample}}^0$ and $\Delta \text{S}_{\text{f}, \text{sample}}^0$ are propagated to estimated $\Delta\text{G}_\text{f}^0$.  
+We could check this approach with a subset from the OBIGT database [@Helgeson.1978; @Wagman.1982; @Shock.1993; @Dale.1997; @Richard.1998; @Helgeson.1998; @Richard.2001; @LaRowe.2006; @LaRowe.2006a; @Helgeson.2009; @LaRowe.2012] from the 'CHNOSZ' R package (version `r packageVersion("CHNOSZ")`) [@Dick.2019]. The OBIGT database is one of the largest open access databases on thermodynamic data [@Dick.2019]. To this end, we used the approach described here to estimate $\Delta\text{G}_\text{f}^0$ for samples in the OBIGT database and plot $\Delta\text{G}_\text{f}^0$ values stored in the OBIGT database for the same compounds and derived by different methods against these estimates. The values were in relative good agreement (supporting Fig. \@ref(fig:irp-plot-5)).  
+According to Hess' law, $\Delta \text{H}_{\text{f}, \text{sample}}^0$ can be computed from the standard enthalpy of combustion ($\Delta \text{H}_{\text{c}, \text{sample}}^0$) and the standard enthalpies of formation of the chemical elements the sample is composed of [@Popovic.2019]:
+
+\begin{equation}
+  \Delta \text{H}_{\text{f}, \text{sample}}^0 = n_\text{C} \text{H}_{\text{f}, \text{CO}_2}^0 + \frac{1}{2}n_\text{H} \Delta \text{H}_{\text{f}, \text{H}_2\text{O}}^0 + \frac{1}{4}n_\text{P} \text{H}_{\text{f}, \text{P}_4\text{O}_{10}}^0 + \frac{1}{2}n_\text{S} \text{H}_{\text{f}, \text{SO}_2}^0 - \text{H}_{\text{c}, \text{sample}}^0 ,
+  (\#eq:popovic-enthalpy-of-formation-1)
+\end{equation}
+
+where all terms have unit kJ mol$_\text{C}^{-1}$, $\Delta \text{H}_{\text{c}, \text{sample}}^0$ is the standard enthalpy of formation for the sample, $\text{H}_{\text{c}, \text{sample}}^0$ the standard enthalpy of combustion, $n_i$ the mols of chemical element $i$ per moles of C in the sample (mol$_i$ mol$_\text{C}^{-1}$), and all other terms the standard enthalpies of formation of the subscripted species.  
+All quantities in equation \@ref(eq:popovic-enthalpy-of-formation-1) can be derived from literature values (we used values derived from the OBIGT database and, for P$_4$O$_{10}$, data from (https://webbook.nist.gov/cgi/cbook.cgi?ID=C16752606&Mask=6F) [@Linstrom.1997]), except for $\Delta\text{H}_{c, \text{sample}}^0$, which can be computed with Thornton's rule [@Thornton.1917; @Patel.1981; @Popovic.2019]:
+
+\begin{equation}
+  \Delta \text{H}_{\text{c}, \text{sample}}^0 = \alpha_1 E ,
+  (\#eq:popovic-enthalpy-of-combustion-2)
+\end{equation}
+
+where $\alpha_1$ is a proportionality constant (kJ mol$_\text{C}^{-1}$) and $E$ the amount of electrons transferred during combustion of an amount of the sample containing 1 mol of C (mol$_{\text{e}^-}$ mol$_\text{C}^{-1}$). Praameter $\alpha_1$ can be estimated by regressing measured combustion enthalpies of samples against their $E$ (see below). Values for $E$ can be computed from known element compositions (assuming formation of SO$_2$) [@Popovic.2019]:
+
+\begin{equation}
+  E = 4n_\text{C} + n_\text{H} + 2n_\text{O} + 0n_\text{N} + 5n_\text{P} + 4n_\text{S} ,
+  (\#eq:popovic-enthalpy-of-combustion-1)
+\end{equation}
+
+where $E$ is the amount of electrons transferred to oxygen during combustion of an amount of the sample containing one mol of C (mol$_{\text{e}^-}$ mol$_\text{C}^{-1}$) and $n_i$ are the amounts of chemical element $i$ in the same amount of sample sample (mol$_i$ mol$_\text{C}^{-1}$).
+
+## Model for the enthalpy of combustion ($\Delta\text{H}_\text{c}^0$)
+
+The proportionality constant $\alpha_1$ from equation \@ref(eq:popovic-enthalpy-of-combustion-2) has been estimated --- using different datasets --- to range between $-108.99$ kJ mol$_\text{C}^{-1}$ and $-111.14$ kJ mol$_\text{C}^{-1}$ [@Battley.1999]. Unfortunately, errors for this estimate, as well as raw data to recompute the models are not straightforwardly accessible and usable from the original studies.  
+Even though equation \@ref(eq:popovic-enthalpy-of-combustion-2) had a good fit to multiple datasets [@Thornton.1917; @Patel.1981], peat samples typically cover only a very small range of transferred electrons ($E$) and therefore, despite a good fit across a large range of $E$, prediction errors for individual samples can be large in comparison to the range in predicted average values for peat samples.  
+For this reason, we re-computed the model to predict $\Delta \text{H}_\text{c}^0$ from $E$ with raw data from the OBIGT database [@Helgeson.1978; @Wagman.1982; @Shock.1993; @Dale.1997; @Richard.1998; @Helgeson.1998; @Richard.2001; @LaRowe.2006; @LaRowe.2006a; @Helgeson.2009; @LaRowe.2012; @Dick.2019].  
+$\Delta\text{H}_\text{c}^0$ cannot be $>0$ because combustion always releases energy. The original model formulations implicitly assume a normal distribution. We suggest an alternative model, where $|\Delta \text{H}_\text{c}^0|$ (the absolute value for $\Delta \text{H}_\text{c}^0$) is modeled with a gamma distribution. The full model is:  
+
+\begin{equation}
+\begin{aligned}
+  |\Delta \text{H}_{\text{c}, \text{sample}}^0| & \sim \text{gamma}(\mu, \phi) \\ 
+  \mu & = \exp(\alpha_1 + \beta \log(E)),\\
+  (\#eq:popovic-enthalpy-of-combustion-3)
+\end{aligned}
+\end{equation}
+
+where $\text{gamma}(\mu, \phi)$ is a gamma distribution parameterized with an average value ($\mu$) and a precision parameter ($\phi$). Parameter $\mu$ is modeled with a log-link function and is assumed to be proportional to $\log(E)$.  
+For the computations, we used a subset of the OBIGT database [@Helgeson.1978; @Wagman.1982; @Shock.1993; @Dale.1997; @Richard.1998; @Helgeson.1998; @Richard.2001; @LaRowe.2006; @LaRowe.2006a; @Helgeson.2009; @LaRowe.2012] in the CHNOSZ package (version `r packageVersion("CHNOSZ")`) [@Dick.2019]. The OBIGT database currently is one of the largest open access database on thermodynamic data from which thermodynamic data can directly be retrieved [@Dick.2019].  
+We subsetted data on organic compounds, CO$_2$, and CH$_4$, in either solid, liquid, or gaseous state, for which values for the enthalpy of formation are reported, which consist only of C, H, N, O, S, P, and are reported as simple chemical formulas. This resulted in thermodynamic data for `r irp_db_obigt_organic |> dplyr::filter(! is.na(enthalpy_of_combustion_per_C) & as.numeric(enthalpy_of_combustion_per_C) < 0) |> nrow()` compounds. The majority of thermodynamic data in this subset is derived either from measured (and recalculated) data or using different group additivity algorithms [@Richard.1998; @Helgeson.1998; @Richard.2001; @LaRowe.2006].  
+Standard combustion enthalpies can be computed from standard formation enthalpies included in the database by Hess' law using the CHNOSZ package [@Dick.2019]. The assumed combustion reaction is [@Popovic.2019]:
+
+\ce{C_aH_bO_cN_dP_eS_f + (a + \frac{1}{4}b + \frac{5}{4}e + f) O_2 (g) -> aCO_2 (g) + \frac{b}{2}H_2O (l) + \frac{d}{2}N_2 (g) + \frac{e}{4}P_4O_{10} (s) + fSO_2 (g)}  
+
+```{r}
+res <- 
+  predict(
+    irp_m1$res_model, 
+    newdata = tibble::tibble(
+      E_per_C = c(12, 1) / as.numeric(irp_m1$res_config$x_max)
+    )
+  )[, -2] |>
+  magrittr::multiply_by(as.numeric(irp_m1$res_config$y_min)) |>
+  magrittr::divide_by(1000)
+
+res <- round((res[1, ] - res[2, ]) / (12 - 1), 1)
+res <- paste0(res[[1]], " (", res[[2]], ", ", res[[3]], ")")
+```
+
+
+The results are shown in Fig. \@ref(fig:irp-plot-1) and \@ref(fig:irp-plot-2).
+Our estimated slope is approximately (approximately because of the log-link of the model), `r res` kJ mol$_\text{C}^{-1}$ (average and 95% confidence interval, Fig. \@ref(fig:irp-plot-1)) [@Patel.1981; @Battley.1999; @Popovic.2019] within the lower range of reported values ($-108.99$ kJ mol$_\text{C}^{-1}$ to $-111.14$ kJ mol$_\text{C}^{-1}$ [@Battley.1999]). 
+
+(ref:irp-plot-1-caption) Plot of $\Delta\text{H}_\text{c}^0$ values in the OBIGT database versus electrons transferred during combustion calculated from equation \@ref(eq:popovic-enthalpy-of-combustion-1). The line represents average predictions by model \@ref(eq:popovic-enthalpy-of-combustion-3).
+
+```{r irp-plot-1, fig.cap='(ref:irp-plot-1-caption)', out.width="60%"}
+knitr::include_graphics(tar_read(irp_plot_1))
+```
+
+(ref:irp-plot-2-caption) Plot of $\Delta\text{H}_\text{c}^0$ values in the OBIGT database versus predictions by model \@ref(eq:popovic-enthalpy-of-combustion-3).
+
+```{r irp-plot-2, fig.cap='(ref:irp-plot-2-caption)', out.width="60%"}
+knitr::include_graphics(tar_read(irp_plot_2))
+```
+
+
+## Model for the entropy of formation ($\Delta\text{S}_\text{f}^0$)
+
+Here, we describe how we recomputed the original model proposed in @Battley.1999 that predicts the entropy of formation from sample stoichiometry with data from the OBIGT database [@Helgeson.1978; @Wagman.1982; @Shock.1993; @Dale.1997; @Richard.1998; @Helgeson.1998; @Richard.2001; @LaRowe.2006; @LaRowe.2006a; @Helgeson.2009; @LaRowe.2012; @Dick.2019] and data from @Battley.1999.  
+Similar to $\Delta \text{H}_\text{c}^0$, we used modified the original model by assuming a gamma distribution with log link function for $|\Delta \text{S}_{\text{f}, \text{sample}}^0|$, since $\Delta \text{S}_{\text{f}, \text{sample}}^0$ is $<0$ for all considered compounds/samples:
+
+\begin{equation}
+\begin{aligned}
+|\Delta \text{S}_{\text{f}, \text{sample}}^0| & \sim \text{Gamma}(\mu, \phi)\\
+\mu & = \exp\left(\alpha_2 + \beta \log\left(\sum_i \frac{\text{S}_i^0}{\text{a}_i} \text{n}_i\right)\right),\\
+(\#eq:battley-entropy-of-formation-2)
+\end{aligned}
+\end{equation}
+
+```{r}
+res_data <- 
+    dplyr::bind_rows(
+      irp_db_obigt_organic |>
+        dplyr::filter(state == "cr"),
+      irp_d_battley_1999_table_1
+    ) |>
+    dplyr::filter(! duplicated(formula), fromLast = TRUE) |>
+    dplyr::filter(!is.na(entropy_of_formation_per_C) & as.numeric(entropy_of_formation_per_C) < 0 & ! is.na(sum_of_element_standard_entropies_per_C) & ! is.infinite(sum_of_element_standard_entropies_per_C))
+  
+```
+
+
+As data, we used data from Tab. 1 in @Battley.1999 extracted with the tabulizer package [@Leeper.2018], and data for compounds from the OBIGT database in their solid state (where $\Delta \text{S}_{\text{f}, \text{sample}}^0$ was computed from standard entropies included in the database and standard entropies from @Battley.1999, as described in @Battley.1999) (in total `r nrow(res_data)` samples). Results are shown in Fig. \@ref(fig:irp-plot-3) and \@ref(fig:irp-plot-4).  
+<!--We note here that an alternative approach to compute $\Delta \text{S}_{\text{f}, \text{sample}}^0$ has been used for peat samples [@Vodyanitskii.2000; @Worrall.2018]. Disadvantages are that this approach uses empirical equations with larger errors and for which no raw data are presented [@Vodyanitskii.2000], which makes it difficult to reproduce the analyses and probably results in larger errors.-->  
+
+(ref:irp-plot-3-caption) Plot of $\Delta\text{S}_\text{f}^0$ values in the OBIGT database and from Tab. 1 in @Battley.1999 versus the sum of standard atomic entropies calculated from the stoichiometry of the compounds and tabulated standard entropies of atoms ($\sum_i \frac{\text{S}_i^0}{\text{a}_i} \text{n}_i$ in equation \@ref(eq:battley-entropy-of-formation-2)). The line represents average predictions by model \@ref(eq:battley-entropy-of-formation-2).
+
+```{r irp-plot-3, fig.cap='(ref:irp-plot-3-caption)', out.width="60%"}
+knitr::include_graphics(tar_read(irp_plot_3))
+```
+
+(ref:irp-plot-4-caption) Plot of $\Delta\text{S}_\text{f}^0$ values in the OBIGT database and from @Battley.1999 versus predictions by model \@ref(eq:battley-entropy-of-formation-2). Error bars are 95% prediction intervals.
+
+```{r irp-plot-4, fig.cap='(ref:irp-plot-4-caption)', out.width="60%"}
+knitr::include_graphics(tar_read(irp_plot_4))
+```
+
+
+## Standard Gibbs free energy of formation ($\Delta\text{G}_\text{f}^0$)
+
+With the models for the enthalpy of combustion and entropy of formation, we could estimate $\Delta\text{G}_\text{f}^0$ as described above (subsection \@ref(irp-sup-dgf0-modeling-approach)) for peat samples from the pmird database with C, H, N, and O contents (contents of additional elements were also considered when measurements were available). Since the average is estimated precisely and the model assumes i.i.d prediction errors, predictions for different samples are independent and could be well approximated with independent normal distributions. For the samples from the OBIGT database, this modeling approach produces estimates that agree reasonably well with $\Delta\text{G}_\text{f}^0$ estimates in the OBIGT database (Fig. \@ref(fig:irp-plot-5)).
+
+(ref:irp-plot-5-caption) Plot of $\Delta\text{G}_\text{f}^0$ values in the OBIGT database versus estimates calculated from elemental contents (per mol C). Error bars are 95% prediction intervals.
+
+```{r irp-plot-5, fig.cap='(ref:irp-plot-5-caption)', out.width="60%"}
+knitr::include_graphics(tar_read(irp_plot_5))
+```
+
+
+# Model evaluation
+
+<!--Here, we show residuals of the best prediction model for each target variable versus measured Ca (Fig. \@ref(fig:irp-plot-16-1)), N (Fig. \@ref(fig:irp-plot-16-2)), and Si contents (Fig. \@ref(fig:irp-plot-16-3)).-->
+
+(ref:irp-plot-16-1-caption) Measured minus predicted values (by the best model) for all target variables versus measured Ca contents (predictions for samples without Ca measurements are not shown). Lines and shaded areas are LOESS smoothers and 95% confidence intervals. 
+
+```{r irp-plot-16-1, fig.cap='(ref:irp-plot-16-1-caption)', out.width="80%"}
+knitr::include_graphics(tar_read(irp_plot_16_1))
+```
+
+(ref:irp-plot-16-2-caption) Measured minus predicted values (by the best model) for all target variables versus measured N contents (predictions for samples without N measurements are not shown). Lines and shaded areas are LOESS smoothers and 95% confidence intervals. 
+
+```{r irp-plot-16-2, fig.cap='(ref:irp-plot-16-2-caption)', out.width="80%"}
+knitr::include_graphics(tar_read(irp_plot_16_2))
+```
+
+(ref:irp-plot-16-3-caption) Measured minus predicted values (by the best model) for all target variables versus measured Si contents (predictions for samples without Si measurements are not shown). Lines and shaded areas are LOESS smoothers and 95% confidence intervals. 
+
+```{r irp-plot-16-3, fig.cap='(ref:irp-plot-16-3-caption)', out.width="80%"}
+knitr::include_graphics(tar_read(irp_plot_16_3))
+```
+
+
+(ref:irp-plot-17-caption) Plot of spectra of samples with Ca content $> 0.015$ g g$^{-1}$ and for five samples with Ca content $> 0.0005$ g g$^{-1}$. Spectra with large Ca and small organic matter content (indicated by presence of large peaks caused by silicates around 1100 and 2000 cm$^{-1}$, e.g., @Parikh.2014) have large peaks caused by carbonates (871 and 1415 cm$^{-1}$, vertical lines) [@Tatzber.2007]. Spectra with large Ca and large organic matter content (indicated by large peaks from aliphatics (around 2900 cm$^{-1}$)) have large carboxylate peaks (around 1650 cm$^{-1}$ [@Ellerbrock.2021], vertical line). Spectra with small Ca and large organic matter content have peaks caused by carboxyls (protonated carboxylates) (around 1750 cm$^{-1}$ [@Ellerbrock.2021]).
+
+```{r irp-plot-17, fig.cap='(ref:irp-plot-17-caption)', out.width="100%"}
+knitr::include_graphics(tar_read(irp_plot_17))
+```
+
+
+(ref:irp-plot-18-caption) Plot of spectra for observations labelled as outliers in \@ref(main-fig:irp-plot-14-1) for each target variable. Note that outliers are identical for P, K, and $\delta^{13}$C (*J. effusus* samples from a short-term fertilization experiment [@Agethen.2018]).
+
+```{r irp-plot-18, fig.cap='(ref:irp-plot-18-caption)', out.width="100%"}
+knitr::include_graphics(tar_read(irp_plot_18)$file_plot)
+```
+
+
+# Model coefficients {#irp-sup-model-coefficients-1}
+
+(ref:irp-plot-20-caption) Model coefficients versus wavenumber values of the predictor variables for the best models (see Tab. \@ref(main-tab:irp-table-1) in the main text). The line is the median coefficient value and shaded areas are confidence intervals with significance level given in the legend.  
+
+```{r irp-plot-20, out.width="80%", fig.cap='(ref:irp-plot-20-caption)'}
+knitr::include_graphics(tar_read(irp_plot_20))
+```
+
+
+```{r, results='asis'}
+irp_table_3 <- 
+  irp_table_3 |>
+  dplyr::mutate(
+    x_assignment =
+      dplyr::case_when(
+        x == 690 ~ "C-S stretching, aromatic C-H bending [@Stuart.2004; @Workman.2016]",
+        x == 780 ~ "aromatic C-H bending (3-substitued), alkene C-H bending [@Stuart.2004; @Workman.2016]",
+        x == 790 ~ "aromatic C-H bending (3-substitued), alkene C-H bending [@Stuart.2004; @Workman.2016]",
+        x == 1150 ~ "SO$_2$ symmetric stretching, C–O stretching (carbohydrates), P-O stretching, O-H bend [@Stuart.2004; @Workman.2016]",
+        x == 1240 ~ "C–O stretching (carboxyls), P–O stretching, P=O stretching [@Stuart.2004; @Workman.2016]",
+        x == 1390 ~ "C–H bending (alkanes, aromatic), C=O stretch (carbonates), C-S stretch [@Stuart.2004; @Tatzber.2007; @Workman.2016]",
+        x == 1560 ~ "N–H bending and C-N stretching (amide), C=O stretching (keton, carboxylate), C-H bend (aromatics) [@Stuart.2004; @Workman.2016]",
+        x == 1630 ~ "C=C stretching (alkene, aromatic), C=O stretching (amide, keton) [@Stuart.2004; @Workman.2016]",
+        x == 1670 ~ "C=O stretching (amide, keton, quinones), C-H bend (aromatic) [@Stuart.2004; @Workman.2016]",
+        x == 2920 ~ "methylene C–H stretching (alkane) [@Stuart.2004; @Workman.2016]",
+        x == 3000 ~ "C-C stretching and C–H stretching (aromatic) [@Stuart.2004; @Workman.2016]",
+        x == 3700 ~ "O–H stretching of weakly bonded OH groups (amorphous cellulose, phenolics, silicates) [@Stuart.2004; @Schmidt.2006; @Workman.2016]",
+        x == 3910 ~ "S=O stretch (sulfones), O-H bend (alcohols) [@Workman.2016]"
+      ),
+    source =
+      x_assignment |>
+      stringr::str_extract(pattern = "\\[.+\\]$"),
+    x_assignment =
+      x_assignment |>
+      stringr::str_remove(pattern = " \\[.+\\]$")
+  ) |>
+  dplyr::mutate(
+    index = irp_get_order_target_variables(target_variable),
+    variable_name = 
+      irp_get_names_target_variables(
+        target_variable, 
+        what = "target_variable_name_latex_short"
+      ),
+    dplyr::across(
+      dplyr::starts_with("pr_"),
+      function(.x) {
+        round(.x, digits = 2)
+      }
+    )
+  ) |>
+  dplyr::arrange(index) |>
+  dplyr::select(variable_name, x, slope, pr_smaller_than_0, pr_larger_than_0, x_assignment, source) |>
+  dplyr::mutate(
+    source_ref =
+      source |>
+      stringr::str_replace_all(pattern = "; @", replacement = "-") |>
+      stringr::str_replace_all(pattern = "\\.", replacement = "") |>
+      stringr::str_remove_all(pattern = "(\\[|\\]|;|@)"),
+    source_ref = paste0("(ref:", source_ref, ")"),
+    source_ref_cat = paste0(source_ref, " ", stringr::str_remove_all(source, pattern = "(\\[|\\])") |> stringr::str_replace_all(";", ","), "\n\n")
+  )
+  
+#cat(unique(irp_table_3$source_ref_cat))
+```
+
+(ref:irp-table-3-caption) Selected coefficients (slopes) for the best models (all with $\Pr(\text{slope} > 0) \ge 0.9$ or $\Pr(\text{slope} < 0) \ge 0.9$ ) and assignment of the wavenumber values to possible molecular structures. Assignments of moelcular structures to wavenumbers are from @Stuart.2004, @Kubo.2005, @Schmidt.2006, @Tatzber.2007, @Parikh.2014, and @Workman.2016.
+
+```{r irp-table-3, tab.cap='(ref:irp-table-3-caption)'}
+irp_table_3 <- 
+  irp_table_3 |>
+  dplyr::select(-source, -source_ref, -source_ref_cat, -dplyr::starts_with("pr_"))
+
+irp_table_3|>
+    kableExtra::kable(
+        format = "latex",
+        booktabs = TRUE, 
+        longtable = FALSE,
+        escape = FALSE, 
+        row.names = FALSE,
+        col.names = c("Variable", "Wavenumber", "Coefficient", "Molecular structures") # , "Pr(slope < 0)", "Pr(slope > 0)"
+    ) |>
+  kableExtra::kable_styling(latex_options = c("scale_down", "HOLD_position")) |>
+  kableExtra::column_spec(which(colnames(irp_table_3) == "x_assignment"), width = "20em") |>
+  kableExtra::collapse_rows(
+    columns = 1, 
+    row_group_label_position = "first", 
+    latex_hline = "major"
+  )
+```
+
+
+# References {-}
+
+

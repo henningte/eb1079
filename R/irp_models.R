@@ -37,34 +37,138 @@ irp_get_target_variables <- function() {
 #' @param x One of `irp_target_variables`.
 #' 
 #' @export
-irp_make_d_model_info <- function(x, irp_data_model_preprocessed, irp_threshold_model_validation_sample_number, irp_isotope_standards_isotope_fraction, irp_pmird_units, irp_m1, irp_m2, irp_d_compounds_standard_enthalpies_of_formation, irp_mass_density_fe) {
+irp_make_d_model_info <- function(n_preprocessing) {
   
-  # general settings
-  res <- 
-    tibble::tibble(
-      target_variable = x,
-      target_variable_label =
+  tibble::tibble(
+    target_variable = irp_get_target_variables(),
+    id_preprocessing = list(seq_len(n_preprocessing)),
+    target_variable_label =
+      dplyr::case_when(
+        target_variable == "carbon_content" ~ "C",
+        target_variable == "nitrogen_content" ~ "N",
+        target_variable == "oxygen_content" ~ "O",
+        target_variable == "hydrogen_content" ~ "H",
+        target_variable == "phosphorus_content" ~ "P",
+        target_variable == "sulfur_content" ~ "S",
+        target_variable == "potassium_content" ~ "K",
+        target_variable == "titanium_content" ~ "Ti",
+        target_variable == "silicon_content" ~ "Si",
+        target_variable == "calcium_content" ~ "Ca",
+        target_variable == "d13C" ~ "d13C",
+        target_variable == "d15N" ~ "d15N",
+        target_variable == "nosc" ~ "nosc",
+        target_variable == "dgf0" ~ "dgf0",
+        target_variable == "loss_on_ignition" ~ "loss_on_ignition",
+        target_variable == "bulk_density" ~ "bulk_density",
+        target_variable == "C_to_N" ~ "C_to_N",
+        target_variable == "O_to_C" ~ "O_to_C",
+        target_variable == "H_to_C" ~ "H_to_C"
+      )
+  ) |>
+    tidyr::unnest("id_preprocessing") |>
+    dplyr::mutate(
+      id_model = paste0(target_variable, "_", id_preprocessing)
+    ) |>
+    dplyr::relocate(id_model, .before = dplyr::everything())
+  
+}
+
+
+
+#### Helper functions for `irp_d_model_info` #####
+
+#' Adds seeds for random number generation to `irp_d_model_info`
+#' 
+#' @export
+irp_add_rng_seed_to_d_model_info <- function(d_model_info) {
+  
+  d_model_info |>
+    dplyr::mutate(
+      rng_seed =
         dplyr::case_when(
-          target_variable == "carbon_content" ~ "C",
-          target_variable == "nitrogen_content" ~ "N",
-          target_variable == "oxygen_content" ~ "O",
-          target_variable == "hydrogen_content" ~ "H",
-          target_variable == "phosphorus_content" ~ "P",
-          target_variable == "sulfur_content" ~ "S",
-          target_variable == "potassium_content" ~ "K",
-          target_variable == "titanium_content" ~ "Ti",
-          target_variable == "silicon_content" ~ "Si",
-          target_variable == "calcium_content" ~ "Ca",
-          target_variable == "d13C" ~ "d13C",
-          target_variable == "d15N" ~ "d15N",
-          target_variable == "nosc" ~ "nosc",
-          target_variable == "dgf0" ~ "dgf0",
-          target_variable == "loss_on_ignition" ~ "loss_on_ignition",
-          target_variable == "bulk_density" ~ "bulk_density",
-          target_variable == "C_to_N" ~ "C_to_N",
-          target_variable == "O_to_C" ~ "O_to_C",
-          target_variable == "H_to_C" ~ "H_to_C"
-        ),
+          id_model == "bulk_density_1" ~ 324324,
+          id_model == "bulk_density_2" ~ 324324,
+          id_model == "bulk_density_3" ~ 777878,
+          id_model == "O_to_C_2" ~ 533363680,
+          id_model == "O_to_C_3" ~ 356324,
+          TRUE ~ NA_real_
+        )
+    )
+  
+}
+
+
+
+#' Adds information on which samples to use for training and which for testing to `irp_d_model_info`
+#' 
+#' @export
+irp_add_data_partition_to_d_model_info <- function(d_model_info, irp_data_model_preprocessed) {
+  
+  d_model_info |>
+    dplyr::mutate(
+      data_partition =
+        purrr::map(seq_along(id_model), function(i) {
+          ir::ir_sample_prospectr(
+            irp_data_model_preprocessed[[1L]] |> #---note: use the same preprocessed data for all models to allow model comparison
+              dplyr::filter(id_measurement %in% id_measurement_all[[i]]) |>
+              dplyr::select(id_measurement, spectra),
+            sampling_function = prospectr::kenStone,
+            metric = "euclid",
+            k = n_training_sample[[i]],
+            return_prospectr_output = FALSE
+          ) |>
+            ir::ir_drop_spectra()
+        }) 
+    )
+  
+}
+
+
+#' Adds the training sample size to `irp_d_model_info`
+#' 
+#' @export
+irp_add_n_training_sample_to_d_model_info <- function(d_model_info, irp_n_training_sample_max) {
+  
+  d_model_info |>
+    dplyr::mutate(
+      n_training_sample =
+        purrr::map_int(seq_along(id_model), function(i) {
+          min(floor(length(id_measurement_all[[i]]) * 0.8), irp_n_training_sample_max)
+        }),
+      n_training_sample = 
+        dplyr::case_when(
+          target_variable %in% c("C_to_N", "sulfur_content", "potassium_content", "d13C", "d15N", "carbon_content", "nitrogen_content", "phosphorus_content", "calcium_content", "bulk_density", "titanium_content") ~ 200L,
+          TRUE ~ n_training_sample
+        )
+    )
+
+}
+
+#' Adds `id_measurement_all` to `irp_d_model_info`
+#' 
+#' @export
+irp_add_id_measurement_all_to_d_model_info <- function(d_model_info, irp_data_model_preprocessed) {
+  
+  d_model_info |>
+    dplyr::mutate(
+      id_measurement_all =
+        purrr::map(seq_along(target_variable), function(i) {
+          irp_data_model_preprocessed[[id_preprocessing[[i]]]] |>
+            dplyr::filter(eval(parse(text = filter_criteria[[i]]))) |>
+            dplyr::pull(id_measurement)
+        })
+    )
+  
+}
+
+
+#' Adds filter criteria to `irp_d_model_info`
+#' 
+#' @export
+irp_add_filter_criteria_to_d_model_info <- function(d_model_info) {
+  
+  d_model_info |>
+    dplyr::mutate(
       filter_criteria =
         dplyr::case_when(
           target_variable == "carbon_content" ~ '! is.na(C)',
@@ -83,107 +187,30 @@ irp_make_d_model_info <- function(x, irp_data_model_preprocessed, irp_threshold_
           target_variable == "dgf0" ~ '! (is.na(C) | is.na(H) | is.na(O)) & sample_type != "dom"',
           target_variable == "loss_on_ignition" ~ '! is.na(loss_on_ignition)',
           target_variable == "bulk_density" ~ '! is.na(bulk_density)',
-          target_variable == "C_to_N" ~ '! is.na(N) & ! is.na(C) ',
+          target_variable == "C_to_N" ~ '! is.na(N) & ! is.na(C) & (Ca < 5000 | is.na(Ca))',
           target_variable == "O_to_C" ~ '! is.na(O) & ! is.na(C) & sample_type != "dom"',
           target_variable == "H_to_C" ~ '! is.na(H) & ! is.na(C) & sample_type != "dom"'
         ) |>
-        paste0(' & (mir_mode != "atr_ftir" | is.na(mir_mode)) '),
-      y_has_error =
-        target_variable %in% c("dgf0"),
-      id_preprocessing = list(seq_along(irp_data_model_preprocessed)),
-      do_dimension_reduction = TRUE,
-      dimension_reduction_method = list(c("plsr")), # dimension_reduction_method = list(c("plsr", "ispca")),
-      uses_only_high_quality_mirs = list(c(TRUE)), # uses_only_high_quality_mirs = list(c(FALSE, TRUE))
-      ncomps = list(c(5, 15, 30))
-    ) |>
-    tidyr::unnest(c("id_preprocessing", "uses_only_high_quality_mirs")) |>
-    tidyr::unnest("ncomps") |>
-    dplyr::filter(ncomps == 5) |>
-    dplyr::mutate(
-      id_measurement_all =
-        purrr::map(seq_along(target_variable), function(i) {
-          res <- 
-            irp_data_model_preprocessed[[id_preprocessing[[i]]]] |>
-            dplyr::filter(eval(parse(text = filter_criteria[[i]])))
-          if(uses_only_high_quality_mirs[[i]]) {
-            res <- 
-              res |>
-              dplyr::filter(! is_baseline_corrected | stringr::str_detect(core_label, "^peatbog"))
-          }
-          res |>
-            dplyr::pull(id_measurement)
-        }),
-      # count
-      sample_size_all =
-        purrr::map_int(id_measurement_all, length),
-      sample_size_all_peat = 
-        purrr::map_int(seq_along(target_variable), function(i) {
-          irp_data_model_preprocessed[[id_preprocessing[[i]]]] |>
-            dplyr::filter(id_measurement %in% id_measurement_all[[i]]) |>
-            dplyr::filter(sample_type == "peat") |>
-            nrow()
-        }),
-      sample_size_all_dom = 
-        purrr::map_int(seq_along(target_variable), function(i) {
-          irp_data_model_preprocessed[[id_preprocessing[[i]]]] |>
-            dplyr::filter(id_measurement %in% id_measurement_all[[i]]) |>
-            dplyr::filter(sample_type == "dom") |>
-            nrow()
-        }),
-      sample_size_all_vegetation = 
-        purrr::map_int(seq_along(target_variable), function(i) {
-          irp_data_model_preprocessed[[id_preprocessing[[i]]]] |>
-            dplyr::filter(id_measurement %in% id_measurement_all[[i]]) |>
-            dplyr::filter(sample_type %in% c("vegetation", "litter")) |>
-            nrow()
-        }),
-      sample_size_all_no_unique_cores =
-        purrr::map_int(seq_along(target_variable), function(i) {
-          irp_data_model_preprocessed[[id_preprocessing[[i]]]] |>
-            dplyr::filter(id_measurement %in% id_measurement_all[[i]]) |>
-            dplyr::filter(sample_type == "peat") |>
-            dplyr::mutate(core_label = paste0(id_dataset, "_", core_label)) |>
-            dplyr::pull(core_label) |>
-            unique() |>
-            length()
-        }),
-      validation_mode = "cv"
-        #dplyr::case_when(
-        #  sample_size_all > irp_threshold_model_validation_sample_number ~ "separate_test_dataset",
-        #  TRUE ~ "cv"
-        #)
-    ) |>
-    irp_add_y_to_d_model_info(
-      irp_data_model_preprocessed = irp_data_model_preprocessed,
-      irp_isotope_standards_isotope_fraction = irp_isotope_standards_isotope_fraction,
-      irp_pmird_units = irp_pmird_units,
-      irp_m1 = irp_m1, 
-      irp_m2 = irp_m2, 
-      irp_d_compounds_standard_enthalpies_of_formation = irp_d_compounds_standard_enthalpies_of_formation
-    ) |>
-    irp_add_likelihood_to_d_model_info() |>
-    irp_add_y_scale_to_d_model_info(
-      irp_isotope_standards_isotope_fraction = irp_isotope_standards_isotope_fraction,
-      irp_mass_density_fe = irp_mass_density_fe
-    ) |>
-    irp_add_x_train_to_d_model_info(
-      irp_data_model_preprocessed = irp_data_model_preprocessed
-    ) |>
-    irp_add_predictor_scale_to_d_model_info() |>
-    irp_add_training_prediction_domain_to_d_model_info(
-      irp_data_model_preprocessed = irp_data_model_preprocessed
-    ) |>
-    #irp_add_dimension_reduction_ncomps_to_d_model_info() |>
-    tidyr::unnest("dimension_reduction_method") |>
-    dplyr::select(-x_train) |>
-    irp_add_id_model_to_d_model_info()
+        paste0(' & (mir_mode != "atr_ftir" | is.na(mir_mode)) & (! is_baseline_corrected | stringr::str_detect(core_label, "^peatbog")) & sample_type != "dom" & id_dataset != 16') 
+    )
   
 }
 
 
+#' Adds information on variables with measurement error
+#' 
+#' 
+#' @export
+irp_add_y_has_error_to_d_model_info <- function(d_model_info) {
+  
+  d_model_info |>
+    dplyr::mutate(
+      y_has_error =
+        target_variable %in% c("dgf0")
+    )
+  
+}
 
-
-#### Helper functions for `irp_d_model_info` #####
 
 #' Adds values for the target variable to `irp_d_model_info`.
 #' 
@@ -200,8 +227,7 @@ irp_add_y_to_d_model_info <- function(d_model_info, irp_data_model_preprocessed,
             "nitrogen_content" = ,
             "oxygen_content" = ,
             "hydrogen_content" = ,
-            "loss_on_ignition" = ,
-            "bulk_density" = {
+            "loss_on_ignition" = {
               irp_data_model_preprocessed[[id_preprocessing[[i]]]] |>
                 dplyr::filter(id_measurement %in% id_measurement_all[[i]]) |>
                 dplyr::select(dplyr::all_of(target_variable_label[[i]])) |>
@@ -214,6 +240,12 @@ irp_add_y_to_d_model_info <- function(d_model_info, irp_data_model_preprocessed,
                       TRUE ~ y
                     )
                 )
+            },
+            "bulk_density" = {
+              irp_data_model_preprocessed[[id_preprocessing[[i]]]] |>
+                dplyr::filter(id_measurement %in% id_measurement_all[[i]]) |>
+                dplyr::select(dplyr::all_of(target_variable_label[[i]])) |>
+                setNames(nm = "y")
             },
             "calcium_content" = ,
             "phosphorus_content" = ,
@@ -241,22 +273,22 @@ irp_add_y_to_d_model_info <- function(d_model_info, irp_data_model_preprocessed,
               irp_data_model_preprocessed[[id_preprocessing[[i]]]] |>
                 dplyr::filter(id_measurement %in% id_measurement_all[[i]]) |>
                 dplyr::select(dplyr::all_of(target_variable_label[[i]])) |>
-                dplyr::mutate(
-                  d13C =
-                    d13C |>
-                    irp_delta_to_atom_fraction(r = irp_isotope_standards_isotope_fraction$r_13C)
-                ) |>
+                #dplyr::mutate(
+                #  d13C =
+                #    d13C |>
+                #    irp_delta_to_atom_fraction(r = irp_isotope_standards_isotope_fraction$r_13C)
+                #) |>
                 setNames(nm = "y")
             },
             "d15N" = {
               irp_data_model_preprocessed[[id_preprocessing[[i]]]] |>
                 dplyr::filter(id_measurement %in% id_measurement_all[[i]]) |>
                 dplyr::select(dplyr::all_of(target_variable_label[[i]])) |>
-                dplyr::mutate(
-                  d15N =
-                    d15N |>
-                    irp_delta_to_atom_fraction(r = irp_isotope_standards_isotope_fraction$r_15N)
-                ) |>
+                #dplyr::mutate(
+                #  d15N =
+                #    d15N |>
+                #    irp_delta_to_atom_fraction(r = irp_isotope_standards_isotope_fraction$r_15N)
+                #) |>
                 setNames(nm = "y")
             },
             "nosc" = {
@@ -344,7 +376,10 @@ irp_add_y_to_d_model_info <- function(d_model_info, irp_data_model_preprocessed,
             "C_to_N" = {
               irp_data_model_preprocessed[[id_preprocessing[[i]]]] |>
                 dplyr::filter(id_measurement %in% id_measurement_all[[i]]) |>
-                dplyr::mutate(y = C/N) |>
+                dplyr::mutate(
+                  y = C/N,
+                  #y = y / (1 + y)
+                ) |>
                 dplyr::select(y)
             },
             "O_to_C" = {
@@ -376,13 +411,15 @@ irp_add_likelihood_to_d_model_info <- function(d_model_info) {
     dplyr::mutate(
       likelihood_name =
         dplyr::case_when(
-          target_variable %in% c(paste0(c("carbon", "hydrogen", "oxygen", "nitrogen", "sulfur", "phosphorus", "potassium", "titanium", "silicon", "calcium"), "_content"), "nosc", "loss_on_ignition", "bulk_density", "O_to_C", "H_to_C", "C_to_N", "d13C", "d15N") ~ "Beta",
-          target_variable %in% c("dgf0") ~ "Gaussian",
+          target_variable %in% c(paste0(c("carbon", "hydrogen", "oxygen", "nitrogen", "sulfur", "phosphorus", "potassium", "titanium", "silicon", "calcium"), "_content"), "nosc", "loss_on_ignition", "C_to_N") ~ "Beta",
+          target_variable %in% c("bulk_density", "O_to_C", "H_to_C") ~ "Gamma",
+          target_variable %in% c("dgf0", "d13C", "d15N") ~ "Gaussian",
           TRUE ~ NA_character_
         ),
       likelihood =
         dplyr::case_when(
           likelihood_name == "Beta" ~ list(brms::Beta(link = "logit", link_phi = "log")),
+          likelihood_name == "Gamma" ~ list(Gamma(link = "log")),
           likelihood_name == "Gaussian" ~ list(gaussian(link = "identity")),
           TRUE ~ list(NULL)
         )
@@ -403,25 +440,25 @@ irp_add_y_scale_to_d_model_info <- function(d_model_info, irp_isotope_standards_
       y_center = 
         dplyr::case_when(
           target_variable %in% c("nosc") ~ -4, #---note: add 4 to scale values in [0, 1]
-          target_variable %in% c("dgf0") ~ purrr::map_dbl(y, function(.y1) mean(.y1$y)),
-          target_variable %in% c("C", "H", "O", "N", "S", "P", "K", "Ti", "Ca", "bulk_density", "O_to_C", "H_to_C", "N_to_C") ~ 0,
-          target_variable == "d15N" ~ irp_delta_to_atom_fraction(x = -500, r = irp_isotope_standards_isotope_fraction$r_15N), #---note: assuming that no peat sample has a d15N value smaller than -500.
-          target_variable == "d13C" ~ irp_delta_to_atom_fraction(x = -500, r = irp_isotope_standards_isotope_fraction$r_13C), #---note: assuming that no peat sample has a d13C value smaller than -500.
+          target_variable %in% c("dgf0", "d13C", "d15N") ~ purrr::map_dbl(y, function(.y1) mean(.y1$y)),
+          target_variable %in% c("carbon_content", "hydrogen_content", "oxygen_content", "nitrogen_content", "sulfur_content", "phosphorus_content", "potassium_content", "titanium_content", "calcium_content", "bulk_density", "O_to_C", "H_to_C", "C_to_N") ~ 0,
+          #target_variable == "d15N" ~ irp_delta_to_atom_fraction(x = -500, r = irp_isotope_standards_isotope_fraction$r_15N), #---note: assuming that no peat sample has a d15N value smaller than -500.
+          #target_variable == "d13C" ~ irp_delta_to_atom_fraction(x = -500, r = irp_isotope_standards_isotope_fraction$r_13C), #---note: assuming that no peat sample has a d13C value smaller than -500.
           TRUE ~ 0.0
         ),
       y_scale =
         dplyr::case_when(
           target_variable %in% c("nosc") ~ 8, #---note: divide by 8 to scale values in [0, 1]
-          target_variable %in% c("dgf0") ~ purrr::map_dbl(y, function(.y1) sd(.y1$y)),
+          target_variable %in% c("dgf0", "d13C", "d15N") ~ purrr::map_dbl(y, function(.y1) sd(.y1$y)),
           target_variable %in% c("carbon_content", "hydrogen_content", "oxygen_content") ~ 1.0,
           target_variable %in% c("nitrogen_content", "sulfur_content", "calcium_content") ~ 0.1, #---note: assuming that no peat/DOM N, S content is ever > 10 mass-%. This will set the range [0, 10] mass-% to [0, 100] mass-% to facilitate MCMC sampling and incorporate additional prior information
           target_variable %in% c("phosphorus_content", "potassium_content", "titanium_content") ~ 0.05, #---note: assuming that no peat/DOM P, K content is ever > 5 mass-%. This will set the range [0, 5] mass-% to [0, 100] mass-% to facilitate MCMC sampling and incorporate additional prior information
-          target_variable == "bulk_density" ~ irp_mass_density_fe, #---note: This is the mass density of pure Fe which can safely be assumed as upper bound. ---todo: I need a reliable source for this digit 
+          target_variable == "bulk_density" ~ 1.0,# irp_mass_density_fe, #---note: This is the mass density of pure Fe which can safely be assumed as upper bound. ---todo: I need a reliable source for this digit 
           target_variable == "O_to_C" ~ (4 * 16 )/ (1 * 12), #---note: Assumed maximum possible O/C mass ratio. Assumed based on a maximum molar ratio of 4/1 (4 O atoms per C atom) and then converted to a mass ratio.
           target_variable == "H_to_C" ~ (4 * 1)/(12), #---note: Assumed maximum possible H/C mass ratio. Assumed based on a maximum molar ratio of 4/1 (4 H atoms per C atom) and then converted to a mass ratio.
-          target_variable == "C_to_N" ~ 0.7/0.001, #---note: Assumed maximum possible C/N mass ratio
-          target_variable == "d15N" ~ irp_delta_to_atom_fraction(x =  1000, r = irp_isotope_standards_isotope_fraction$r_15N), #---note: assuming that no peat sample has a d15N value larger than 1000.
-          target_variable == "d13C" ~ irp_delta_to_atom_fraction(x =  1000, r = irp_isotope_standards_isotope_fraction$r_13C), #---note: assuming that no peat sample has a d13C value larger than 1000.
+          target_variable == "C_to_N" ~ 0.7/0.001, # 0.05/0.3, # 0.7/0.001, #---note: Assumed maximum possible C/N mass ratio
+          #target_variable == "d15N" ~ irp_delta_to_atom_fraction(x =  1000, r = irp_isotope_standards_isotope_fraction$r_15N), #---note: assuming that no peat sample has a d15N value larger than 1000.
+          #target_variable == "d13C" ~ irp_delta_to_atom_fraction(x =  1000, r = irp_isotope_standards_isotope_fraction$r_13C), #---note: assuming that no peat sample has a d13C value larger than 1000.
           TRUE ~ 1.0
         )
     )
@@ -525,16 +562,26 @@ irp_add_priors_to_d_model_info <- function(d_model_info, irp_isotope_standards_i
   
   d_model_info |>
     dplyr::mutate(
-      prior_phi = "gamma(prior_phi_shape, prior_phi_scale)",
+      prior_phi = 
+        dplyr::case_when(
+          target_variable == "dgf0" ~ "gamma(prior_phi_shape, prior_phi_scale)",
+          TRUE ~ "gamma(prior_phi_shape, prior_phi_scale)"
+        ),
       prior_phi_shape = 
         dplyr::case_when(
-          target_variable == "dgf0" ~ 5.0,
-          TRUE ~ 2.5
+          target_variable %in% c("d13C", "d15N") ~ 5.0,
+          target_variable %in% c("dgf0") ~ 10.0,
+          #target_variable == "carbon_content" ~ 50.0,
+          TRUE ~ 5
         ),
       prior_phi_scale = 
         dplyr::case_when(
-          target_variable == "dgf0" ~ 5.0/0.5, #---note: zero-avoiding prior
-          TRUE ~ 2.5/500.0
+          target_variable %in% c("d13C", "d15N") ~ 5.0/0.5, #---note: zero-avoiding prior
+          target_variable %in% c("dgf0") ~ 10.0/0.4,
+          #target_variable == "carbon_content" ~ 50.0 / 300.0,
+          target_variable %in% c("titanium_content", "potassium_content", "calcium_content", "silicon_content", "sulfur_content") ~ 5.0 / 100.0,
+          target_variable %in% c("carbon_content", "nitrogen_content", "C_to_N") ~ 5.0 / 100.0,
+          TRUE ~ 5.0/300
         ),
       prior_phi_class =
         purrr::map_chr(seq_along(target_variable), function(i) {
@@ -553,34 +600,34 @@ irp_add_priors_to_d_model_info <- function(d_model_info, irp_isotope_standards_i
           target_variable == "nitrogen_content" ~ -2, # see Loisel.2014
           target_variable == "oxygen_content" ~ brms::logit_scaled(0.34), # see Moore.2018a
           target_variable == "hydrogen_content" ~ brms::logit_scaled(0.052), # see Moore.2018a
-          target_variable == "phosphorus_content" ~ brms::logit_scaled(0.001/y_scale), #---note The average value (0.001) is from Moore.2018a
+          target_variable == "phosphorus_content" ~ brms::logit_scaled(0.0005/y_scale), #---note The average value (0.001) is from Moore.2018a
           target_variable == "sulfur_content" ~ brms::logit_scaled(0.002/y_scale), #---note: See Moore.2018a
           target_variable == "potassium_content" ~ brms::logit_scaled(0.001/y_scale), #---note The average value (0.001) is from Moore.2018a
           target_variable == "titanium_content" ~ brms::logit_scaled(0.001/y_scale), #---note: assuming the same content as for P
           target_variable == "silicon_content" ~ brms::logit_scaled(0.05/y_scale),
           target_variable == "calcium_content" ~ brms::logit_scaled(0.002/y_scale), #---note: assuming the same content as for P
-          target_variable == "d13C" ~ brms::logit_scaled((irp_delta_to_atom_fraction(x = -25, r = irp_isotope_standards_isotope_fraction$r_13C) - y_center)/y_scale), # Approximate average d13C value for terrestrial C3 plants from Kohn.2010.
-          target_variable == "d15N" ~ brms::logit_scaled((irp_delta_to_atom_fraction(x = 0, r = irp_isotope_standards_isotope_fraction$r_15N) - y_center)/y_scale), # Isotope value of the AIR standard
+          target_variable == "d13C" ~ 0.0,# brms::logit_scaled((irp_delta_to_atom_fraction(x = -25, r = irp_isotope_standards_isotope_fraction$r_13C) - y_center)/y_scale), # Approximate average d13C value for terrestrial C3 plants from Kohn.2010.
+          target_variable == "d15N" ~ 0.0,# brms::logit_scaled((irp_delta_to_atom_fraction(x = 0, r = irp_isotope_standards_isotope_fraction$r_15N) - y_center)/y_scale), # Isotope value of the AIR standard
           target_variable == "nosc" ~ brms::logit_scaled((-0.4 + 4.0)/y_scale), # Corresponds roughly to the average value for deeper peat given in Moore.2018
           target_variable == "dgf0" ~ 0.0,
           target_variable == "loss_on_ignition" ~ brms::logit_scaled(0.97/y_scale), # see Loisel.2014
-          target_variable == "bulk_density" ~ brms::logit_scaled(0.076/y_scale), # see Loisel.2014
-          target_variable == "C_to_N" ~ brms::logit_scaled(55/y_scale), # see Loisel.2014
-          target_variable == "O_to_C" ~ units::set_units(0.65, "mol_O/mol_C") |> units::set_units("g_O/g_C") |> as.numeric() |> magrittr::divide_by(y_scale) |> brms::logit_scaled(), # see values cited for various peat materials in Moore.2018a (similar to bog peat)
-          target_variable == "H_to_C" ~ units::set_units(1.4, "mol_H/mol_C") |> units::set_units("g_H/g_C") |> as.numeric() |> magrittr::divide_by(y_scale) |> brms::logit_scaled(), # see values cited for various peat materials in Moore.2018a and Leifeld.2020
+          target_variable == "bulk_density" ~ log(0.076/y_scale), # see Loisel.2014
+          target_variable == "C_to_N" ~ brms::logit_scaled(55/y_scale), # brms::logit_scaled((55) / (1 + (55))), # log((1/55)/y_scale), # brms::logit_scaled(55/y_scale), # see Loisel.2014
+          target_variable == "O_to_C" ~ units::set_units(0.65, "mol_O/mol_C") |> units::set_units("g_O/g_C") |> as.numeric() |> magrittr::divide_by(y_scale) |> log(), # units::set_units(0.65, "mol_O/mol_C") |> units::set_units("g_O/g_C") |> as.numeric() |> magrittr::divide_by(y_scale) |> brms::logit_scaled(), # see values cited for various peat materials in Moore.2018a (similar to bog peat)
+          target_variable == "H_to_C" ~ units::set_units(1.4, "mol_H/mol_C") |> units::set_units("g_H/g_C") |> as.numeric() |> magrittr::divide_by(y_scale) |> log(), # units::set_units(1.4, "mol_H/mol_C") |> units::set_units("g_H/g_C") |> as.numeric() |> magrittr::divide_by(y_scale) |> brms::logit_scaled(), # see values cited for various peat materials in Moore.2018a and Leifeld.2020
           TRUE ~ NA_real_
         ),
       prior_intercept_sd = 
         dplyr::case_when(
-          target_variable == "carbon_content" ~ 0.2, 
+          target_variable == "carbon_content" ~ 0.5, 
           target_variable == "nitrogen_content" ~ 0.2,
           target_variable == "oxygen_content" ~ 0.2,
           target_variable == "hydrogen_content" ~ 0.2,
-          target_variable == "phosphorus_content" ~ 0.5,
+          target_variable == "phosphorus_content" ~ 0.2,
           target_variable == "sulfur_content" ~ 0.5,
-          target_variable == "potassium_content" ~ 0.5,
+          target_variable == "potassium_content" ~ 0.1,
           target_variable == "titanium_content" ~ 0.5,
-          target_variable == "silicon_content" ~ 0.2,
+          target_variable == "silicon_content" ~ 0.1,
           target_variable == "calcium_content" ~ 0.2,
           target_variable == "d13C" ~ 0.5,
           target_variable == "d15N" ~ 0.5,
@@ -593,9 +640,22 @@ irp_add_priors_to_d_model_info <- function(d_model_info, irp_isotope_standards_i
           target_variable == "H_to_C" ~ 0.2,
           TRUE ~ NA_real_
         ),
-      prior_b = "normal(prior_b_mu, prior_b_sd)",
-      prior_b_mu = 0.0,
-      prior_b_sd = 0.5,
+      prior_b_par_ratio =
+        purrr::map(seq_along(target_variable), function(i) {
+          p <- ncol(x_train[[i]])
+          p0 <- 
+            dplyr::case_when(
+              target_variable[[i]] == "carbon_content" ~ 5,
+              TRUE ~ 5
+            )
+          p0/p
+        }),
+      prior_b_df = 
+        dplyr::case_when(
+          target_variable %in% c("oxygen_content", "hydrogen_content", "phosphorus_content", "titanium_content", "C_to_N", "O_to_C", "dgf0_1") ~ 4,
+          TRUE ~ 3
+        ),
+      prior_b = paste0("horseshoe(df = ", prior_b_df, ", par_ratio = ", prior_b_par_ratio, ", df_global = 1, autoscale = TRUE)"),
       prior_all =
         purrr::map(seq_along(target_variable), function(i) {
           rbind(
@@ -603,6 +663,13 @@ irp_add_priors_to_d_model_info <- function(d_model_info, irp_isotope_standards_i
             brms::prior_string(prior_phi[[i]], class = prior_phi_class[[i]], lb = 0.0),
             brms::prior_string(prior_b[[i]], class = "b")
           ) 
+        }),
+      prior_stanvars =
+        purrr::map(seq_along(target_variable), function(i) {
+          brms::stanvar(prior_phi_shape[[i]], name = "prior_phi_shape") +
+            brms::stanvar(prior_phi_scale[[i]], name = "prior_phi_scale") +
+            brms::stanvar(prior_intercept_mu[[i]], name = "prior_intercept_mu") +
+            brms::stanvar(prior_intercept_sd[[i]], name = "prior_intercept_sd")
         })
     )
   
@@ -902,22 +969,23 @@ irp_predict_scores_dimension_reduction_model_1 <- function(irp_dimension_reducti
 #' Helper that prepares data for the brms models using scores from dimension reduction models as predictors
 #' 
 #' @export
-irp_prepare_data_for_brms_models_1 <- function(x, newdata = NULL, irp_dimension_reduction_model_1, irp_data_model_preprocessed) {
+irp_prepare_data_for_brms_models_1 <- function(x) {
   
   d_model_info <- x
   
   res <- 
     tibble::tibble(
       y = 
-        d_model_info$y[[1]]$y |>
+        d_model_info$y[[1]] |>
+        dplyr::filter(d_model_info$id_measurement_all[[1]] %in% (d_model_info$data_partition[[1]] |> dplyr::filter(for_prospectr_model) |> dplyr::pull(id_measurement))) |>
+        dplyr::pull(y) |>
         scale(center = d_model_info$y_center[[1]], scale = d_model_info$y_scale[[1]]) |>
         as.numeric(),
       x = 
-        irp_predict_scores_dimension_reduction_model_1(
-          irp_dimension_reduction_model_1 = irp_dimension_reduction_model_1,
-          newdata = NULL,
-          ncomps = d_model_info$ncomps[[1]]
-        )
+        d_model_info$x_train[[1]] |>
+        tibble::as_tibble() |>
+        dplyr::filter(d_model_info$id_measurement_all[[1]] %in% (d_model_info$data_partition[[1]] |> dplyr::filter(for_prospectr_model) |> dplyr::pull(id_measurement))) |>
+        as.matrix()
     )
   
   if(d_model_info$y_has_error[[1]]) {
@@ -925,7 +993,9 @@ irp_prepare_data_for_brms_models_1 <- function(x, newdata = NULL, irp_dimension_
       res |>
       dplyr::mutate(
         y_err =
-          d_model_info$y[[1]]$y_err |>
+          d_model_info$y[[1]] |>
+          dplyr::filter(d_model_info$id_measurement_all[[1]] %in% (d_model_info$data_partition[[1]] |> dplyr::filter(for_prospectr_model) |> dplyr::pull(id_measurement))) |>
+          dplyr::pull(y_err) |>
           scale(center = 0.0, scale = d_model_info$y_scale[[1]]) |>
           as.numeric()
       ) |>
@@ -940,60 +1010,37 @@ irp_prepare_data_for_brms_models_1 <- function(x, newdata = NULL, irp_dimension_
 
 
 #' Compiles a brmsfit model (to avoid recompilation with different datasets)
-#'
-#' @param ... Additional arguments passed to `brms::brm()`.
 #' 
 #' @export
-irp_make_brms_compiled_model <- function(irp_d_model_info, irp_data_for_brms_models_1, irp_isotope_standards_isotope_fraction, ...) {
+irp_make_brms_compiled_model <- function(irp_brms_compiled_model_metadata) {
   
   res_d_model_info <- 
-    irp_d_model_info |>
-    irp_add_priors_to_d_model_info(
-      irp_isotope_standards_isotope_fraction = irp_isotope_standards_isotope_fraction
-    ) |>
-    irp_add_model_formula_to_d_model_info() |>
-    dplyr::ungroup() |>
-    dplyr::mutate(
-      id_model2 = seq_along(target_variable)
-    ) |>
-    dplyr::group_by(likelihood_name, y_has_error) |>
-    dplyr::summarize(
-      id_model2 = id_model2[[1]],
-      likelihood = likelihood[1],
-      prior_all = prior_all[1],
-      prior_phi_shape = prior_phi_shape[[1]],
-      prior_phi_scale = prior_phi_scale[[1]],
-      prior_intercept_mu = prior_intercept_mu[[1]],
-      prior_intercept_sd = prior_intercept_sd[[1]],
-      prior_b_mu = prior_b_mu[[1]],
-      prior_b_sd = prior_b_sd[[1]],
-      brms_formula = brms_formula[1],
-      .groups = "drop"
-    )
+    irp_brms_compiled_model_metadata
   
   res_d_model_info$brms_model <- 
     purrr::map(seq_len(nrow(res_d_model_info)), function(i) {
       
-      res_stanvars <- 
-        brms::stanvar(res_d_model_info$prior_phi_shape[[i]], name = "prior_phi_shape") +
-        brms::stanvar(res_d_model_info$prior_phi_scale[[i]], name = "prior_phi_scale") +
-        brms::stanvar(res_d_model_info$prior_intercept_mu[[i]], name = "prior_intercept_mu") +
-        brms::stanvar(res_d_model_info$prior_intercept_sd[[i]], name = "prior_intercept_sd") +
-        brms::stanvar(res_d_model_info$prior_b_mu[[i]], name = "prior_b_mu") +
-        brms::stanvar(res_d_model_info$prior_b_sd[[i]], name = "prior_b_sd")
-      
       brms::brm(
         formula = res_d_model_info$brms_formula[[i]],
-        data = irp_data_for_brms_models_1[[res_d_model_info$id_model2[[i]]]], 
+        data = 
+          tibble::tibble(
+            y = 0.5, 
+            y_err = 
+              if(res_d_model_info$y_has_error[[i]]) {
+                0.1
+              } else {
+                NULL
+              }, 
+            x = 3
+          ), 
         family = res_d_model_info$likelihood[[i]],
         prior = res_d_model_info$prior_all[[i]],
-        stanvars = res_stanvars,
+        stanvars = res_d_model_info$prior_stanvars[[i]],
         chains = 0,
         save_pars = brms::save_pars(all = TRUE),
         backend = "cmdstanr",
         save_warmup = TRUE,
-        sig_figs = 14L,
-        ...
+        sig_figs = 14L
       )
       
     })
@@ -1009,51 +1056,53 @@ irp_make_brms_compiled_model <- function(irp_d_model_info, irp_data_for_brms_mod
 #' @param x A row in `irp_d_model_info_byrow`
 #' 
 #' @export
-irp_make_fit_1 <- function(x, irp_brms_compiled_model, irp_data_for_brms_models_1, irp_isotope_standards_isotope_fraction, irp_mcmc_settings) {
+irp_make_fit_1 <- function(x, irp_brms_compiled_model, irp_data_for_brms_models_1, irp_isotope_standards_isotope_fraction, irp_mcmc_settings, irp_fit_1_pathfinder) {
   
   stopifnot(nrow(x) == 1)
-  
-  # add model formula and prior
-  x <- 
-    x |>
-    irp_add_priors_to_d_model_info(
-      irp_isotope_standards_isotope_fraction = irp_isotope_standards_isotope_fraction
-    ) |>
-    irp_add_model_formula_to_d_model_info()
   
   res_brms_compiled <- 
     irp_brms_compiled_model |>
     dplyr::filter(likelihood_name == x$likelihood_name & y_has_error == x$y_has_error) |>
     dplyr::pull(brms_model)
   
-  res_stanvars <- 
-    brms::stanvar(x$prior_phi_shape[[1]], name = "prior_phi_shape") +
-    brms::stanvar(x$prior_phi_scale[[1]], name = "prior_phi_scale") +
-    brms::stanvar(x$prior_intercept_mu[[1]], name = "prior_intercept_mu") +
-    brms::stanvar(x$prior_intercept_sd[[1]], name = "prior_intercept_sd") +
-    brms::stanvar(x$prior_b_mu[[1]], name = "prior_b_mu") +
-    brms::stanvar(x$prior_b_sd[[1]], name = "prior_b_sd")
-  
   update(
     res_brms_compiled[[1]], 
     newdata = irp_data_for_brms_models_1,
-    stanvars = res_stanvars,
+    stanvars = x$prior_stanvars[[1]],
+    prior = x$prior_all[[1]],
     iter = irp_mcmc_settings$iter,
     warmup = irp_mcmc_settings$warmup,
     chains = irp_mcmc_settings$chains,
-    cores = 1L,
+    cores = 4L,
     control = 
       list(
         max_treedepth = irp_mcmc_settings$max_treedepth,
-        adapt_delta = 0.95
+        adapt_delta = irp_mcmc_settings$adapt_delta
       ),
-    init =
-      purrr::map(seq_len(irp_mcmc_settings$chains), function(i) {
-        list(
-          phi = rgamma(1L, x$prior_phi_shape[[1]], x$prior_phi_scale[[1]]),
-          Intercept = rnorm(1L, x$prior_intercept_mu[[1]], x$prior_intercept_sd[[1]])
+    init = {
+      d_pathfinder <- 
+        as.data.frame(irp_fit_1_pathfinder) |>
+        dplyr::select(! dplyr::all_of(c("lprior", "lp__", "lp_approx__")))
+      d_cuts_width <- nrow(d_pathfinder) / irp_mcmc_settings$chains
+      d_cuts <- 
+        tibble::tibble(
+          start = seq(1, by = d_cuts_width, length.out = irp_mcmc_settings$chains),
+          end = start + d_cuts_width - 1
         )
-      }),
+      purrr::map(seq_len(irp_mcmc_settings$chains), function(i) {
+        res <- 
+          tibble::tibble(
+          value = apply(d_pathfinder[d_cuts$start[[i]]:d_cuts$end[[i]], ], 2, mean),
+          name = 
+            names(value) |>
+            stringr::str_remove(pattern = "\\[\\d+\\]$")
+        ) |>
+          tidyr::nest(data = c(value))
+        res1 <- purrr::map(res$data, function(.x) unname(.x$value))
+        names(res1) <- res$name
+        res1
+      })
+    },
     save_pars = brms::save_pars(all = TRUE),
     backend = "cmdstanr",
     save_warmup = TRUE,
@@ -1063,10 +1112,306 @@ irp_make_fit_1 <- function(x, irp_brms_compiled_model, irp_data_for_brms_models_
 }
 
 
+#' Helper to fit brms pathfinder models
+#' 
+#' @param x A row in `irp_d_model_info_byrow`
+#' 
+#' @export
+irp_make_fit_1_pathfinder <- function(x, irp_brms_compiled_model, irp_data_for_brms_models_1, irp_isotope_standards_isotope_fraction, irp_mcmc_settings) {
+  
+  stopifnot(nrow(x) == 1)
+  #switch(
+  #  x$id_model,
+  #  "bulk_density_1" = 324324,
+  #  "O_to_C_2" = 533363680,
+  #  NA
+  #) |>
+  #  set.seed()
+  
+  res_brms_compiled <- 
+    irp_brms_compiled_model |>
+    dplyr::filter(likelihood_name == x$likelihood_name & y_has_error == x$y_has_error) |>
+    dplyr::pull(brms_model)
+  
+  update(
+    res_brms_compiled[[1]], 
+    newdata = irp_data_for_brms_models_1,
+    stanvars = x$prior_stanvars[[1]],
+    algorithm = "pathfinder",
+    seed = x$rng_seed[[1]],
+    init =
+      if(x$likelihood_name[[1]] == "Gamma") {
+        NULL
+      } else {
+        purrr::map(seq_len(8L), function(i) {
+          res <- list(Intercept = rnorm(1L, x$prior_intercept_mu[[1]], x$prior_intercept_sd[[1]]))
+          res_phi_name <- 
+            switch(
+              x$likelihood_name[[1]],
+              "Beta" = "phi",
+              "Gamma" = "shape",
+              "Gaussian" = "sigma"
+            )
+          res_phi <- 
+            switch(
+              x$likelihood_name[[1]],
+              "Beta" = ,
+              "Gamma" = ,
+              "Gaussian" = rgamma(1L, x$prior_phi_shape[[1]], x$prior_phi_scale[[1]])
+            )
+          res[[res_phi_name]] <- res_phi
+          res
+        }) 
+      },
+    num_paths = 8L,
+    history_size = 100,
+    max_lbfgs_iters = 500,
+    single_path_draws = 40,
+    draws = 160,
+    psis_resample = FALSE,
+    sig_figs = 10
+  )
+  
+}
 
 
 
 #### Model validation ####
+
+#### new:start ####
+
+#' Compares ELPD between compatible models
+#' 
+#' @export
+irp_make_fit_1_map_elpd_compare <- function(irp_d_model_info_enriched_1, irp_fit_1_map_elpd) {
+  
+  irp_d_model_info_enriched_1 |>
+    dplyr::mutate(
+      elpd = irp_fit_1_map_elpd
+    ) |>
+    dplyr::group_by(target_variable) |>
+    dplyr::summarise(
+      elpd_compare = 
+        {
+          res <-
+            loo::loo_compare(x = elpd)
+          res |>
+            as.data.frame() |>
+            dplyr::mutate(
+              id_model = 
+                rownames(res) |>
+                stringr::str_remove(pattern = "^irp_fit_1_elpd_")
+            )|>
+            list()
+        },
+      .groups = "drop"
+    ) |>
+    tidyr::unnest(c("elpd_compare")) |>
+    dplyr::relocate("id_model", .before = dplyr::everything())
+  
+}
+
+#' Collects measured values and predictions for all models
+#' 
+#' @export
+irp_fit_1_make_evaluation_1 <- function(irp_d_model_info_enriched_2, irp_fit_1, irp_isotope_standards_isotope_fraction) {
+  
+  d_model_info <- irp_d_model_info_enriched_2
+  
+  # prepare all data for prediction
+  res_newdata <- 
+    tibble::tibble(
+      y = 
+        d_model_info$y[[1]] |>
+        dplyr::pull(y) |>
+        scale(center = d_model_info$y_center[[1]], scale = d_model_info$y_scale[[1]]) |>
+        as.numeric(),
+      y_err =
+        if(d_model_info$y_has_error) {
+          d_model_info$y[[1]] |>
+            dplyr::pull(y_err) |>
+            scale(center = 0.0, scale = d_model_info$y_scale[[1]]) |>
+            as.numeric()
+        } else {
+          NULL
+        },
+      x = 
+        d_model_info$x_train[[1]] |>
+        tibble::as_tibble() |>
+        as.matrix()
+    )
+  
+  # predictions
+  res <- 
+    tibble::tibble(
+      id_model = d_model_info$id_model,
+      target_variable = d_model_info$target_variable,
+      id_measurement = d_model_info$id_measurement_all[[1]],
+      is_training_data = d_model_info$data_partition[[1]]$for_prospectr_model,
+      y = res_newdata$y,
+      y_err = 
+        if(is.null(res_newdata$y_err)) {
+          NA_real_
+        } else {
+          res_newdata$y_err * d_model_info$y_scale[[1]]
+        },
+      yhat = 
+        brms::posterior_predict(
+          irp_fit_1,
+          re_formula = NULL,
+          newdata = res_newdata
+        ) |>
+        posterior::rvar()
+    ) |>
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::all_of(c("y", "yhat")),
+        function(.x) {
+          .x |>
+            magrittr::multiply_by(d_model_info$y_scale[[1]]) |>
+            magrittr::add(d_model_info$y_center[[1]])
+        }
+      ),
+      unit_for_modeling =
+        irp_get_units_target_variables(target_variable, what = "unit_for_modeling"),
+      unit_for_plotting = 
+        irp_get_units_target_variables(target_variable, what = "unit_for_plotting"),
+      y = 
+        y |>
+        units::set_units(unit_for_modeling[[1]], mode = "standard") |>
+        units::set_units(unit_for_plotting[[1]], mode = "standard") |>
+        units::drop_units(),
+      y_err = 
+        y_err |>
+        units::set_units(unit_for_modeling[[1]], mode = "standard") |>
+        units::set_units(unit_for_plotting[[1]], mode = "standard") |>
+        units::drop_units(),
+      yhat = 
+        yhat |>
+        irp_set_units_rvar(unit_for_modeling[[1]], mode = "standard") |>
+        irp_set_units_rvar(unit_for_plotting[[1]], mode = "standard") |>
+        irp_drop_units_rvar(),
+      y_mcse_mean = posterior::mcse_mean(yhat),
+      y_mcse_sd = posterior::mcse_sd(yhat),
+      y_mcse_lower = posterior::mcse_quantile(yhat, probs = 0.025),
+      y_mcse_upper = posterior::mcse_quantile(yhat, probs = 0.975)
+    ) |>
+    dplyr::select(-target_variable)
+  
+  # compute rmse
+  res_rmse <- 
+    res |>
+    dplyr::group_by(is_training_data) |>
+    dplyr::summarise(
+      rmse = irp_rmse_rvar(yhat = yhat, y = y),
+      bias = posterior::rvar_mean(y - yhat),
+      .groups = "drop"
+    ) |>
+    dplyr::mutate(
+      rmse_train_minus_test = rmse[is_training_data] - rmse[! is_training_data]
+    )
+  
+  res <- 
+    list(
+      yhat = 
+        res |>
+        dplyr::mutate(
+          yhat_err = posterior::sd(yhat),
+          yhat = mean(yhat)
+        ),
+      rmse = 
+        res_rmse |>
+        dplyr::mutate(
+          dplyr::across(
+            dplyr::where(posterior::is_rvar),
+            function(x) {
+              purrr::map(x, function(.x) {
+                res <- 
+                  tibble::tibble(
+                  mean = mean(.x),
+                  lower = posterior::quantile2(.x, probs = 0.025),
+                  upper = posterior::quantile2(.x, probs = 0.975)
+                )
+                res |>
+                  setNames(nm = paste0(dplyr::cur_column(), "_", colnames(res)))
+              })
+            } 
+          )
+        ) |>
+        tidyr::unnest(c("rmse", "bias", "rmse_train_minus_test")),
+      num_divergent = 
+        irp_fit_1$fit |>
+        rstan::get_num_divergent(),
+      max_rhat =
+        irp_fit_1 |>
+        brms::rhat() |>
+        max()
+    )
+  
+}
+
+
+#' Computes the training and testing prediction domains for a model
+#' 
+#' @export
+irp_make_fit_1_pd <- function(irp_d_model_info_enriched_2, irp_data_model_preprocessed) {
+  
+  res_ir <- 
+    irp_data_model_preprocessed[[irp_d_model_info_enriched_2$id_preprocessing[[1]]]] |>
+    ir::ir_scale(
+      center = irp_d_model_info_enriched_2$x_center[[1]],
+      scale = irp_d_model_info_enriched_2$x_scale[[1]]
+    )
+  
+  list(
+    train = 
+      res_ir |>
+      dplyr::filter(id_measurement %in% (irp_d_model_info_enriched_2$data_partition[[1]] |> dplyr::filter(for_prospectr_model) |> dplyr::pull(id_measurement))) |>
+      irpeat::irp_as_irp_prediction_domain(),
+    test = 
+      res_ir |>
+      dplyr::filter(id_measurement %in% (irp_d_model_info_enriched_2$data_partition[[1]] |> dplyr::filter(for_prospectr_test) |> dplyr::pull(id_measurement))) |>
+      irpeat::irp_as_irp_prediction_domain(),
+    all = 
+      res_ir |>
+      dplyr::filter( (mir_mode != "atr_ftir" | is.na(mir_mode)) & (! is_baseline_corrected | stringr::str_detect(core_label, "^peatbog")) & sample_type != "dom") |>
+      dplyr::filter(id_dataset != 16) |> #---note: seem to be ATR spectra
+      irpeat::irp_as_irp_prediction_domain()
+  )
+  
+}
+
+
+#' Extracts model coefficients (slopes)
+#' 
+#' @export
+irp_make_fit_1_slopes <- function(irp_fit_1, irp_d_model_info_enriched_2, irp_data_model_preprocessed) {
+  
+  res_model <- irp_fit_1
+  res_model_info <- irp_d_model_info_enriched_2
+  
+  res <- 
+    tibble::tibble(
+      x = 
+        irp_data_model_preprocessed[[res_model_info$id_preprocessing]]$spectra[[1]]$x,
+      slope =
+        res_model |>
+        as.data.frame() |>
+        dplyr::select(dplyr::starts_with("b_x")) |>
+        as.matrix() |>
+        posterior::rvar()
+    )
+  
+  res_file <- paste0("targets_rvars/irp_fit_1_", irp_d_model_info_enriched_2$id_model, ".rds")
+  saveRDS_rvars(res, res_file)
+  res_file
+  
+}
+
+
+
+#### new:end ####
+
 
 #' Estimates depth ranges for which selected peat properties are autocorrelated with depth
 #' 
@@ -1457,76 +1802,46 @@ irp_make_d_model_info_validation <- function(irp_d_model_info, irp_validation_fo
 
 #' Computes the ELPD for all validation folds for a model and combines them
 #' 
-#' @param d_model_info One row of `irp_d_model_info`.
-#' 
-#' @param d_model_info_validation The rows in `irp_d_model_info_validation` 
-#' corresponding to `d_model_info`.
-#' 
-#' @param irp_fit_1_validation_config The elements of `irp_fit_1_validation_config` 
-#' corresponding to `d_model_info`.
-#' 
-#' @param irp_fit_1_validation The elements of `irp_fit_1_validation` 
-#' corresponding to `d_model_info`. 
-#' 
 #' @export
-irp_make_validation_elpd <- function(d_model_info_validation, d_model_info, irp_fit_1_validation_config, irp_fit_1_validation, irp_data_model_preprocessed) {
+irp_make_validation_elpd <- function(irp_d_model_info_enriched_2, irp_fit_1) {
   
-  purrr::map(seq_len(nrow(d_model_info_validation)), function(i) {
-    
-    x <- 
-      irp_data_model_preprocessed[[d_model_info_validation$id_preprocessing[[i]]]] |>
-      dplyr::filter(id_measurement %in% d_model_info_validation$id_measurement_test[[i]]) |>
-      ir::ir_scale(
-        center = irp_fit_1_validation_config[[i]]$irp_preprocess$scale_center, 
-        scale = irp_fit_1_validation_config[[i]]$irp_preprocess$scale_scale
-      )
-    
-    newdata <- 
-      irp_predict_for_eb1079_helper_1(
-        x = x, 
-        config = irp_fit_1_validation_config[[i]]
-      ) |>
-      dplyr::mutate(
-        y = 
-          d_model_info$y[[1]] |>
-          dplyr::filter(d_model_info$id_measurement_all[[1]] %in% d_model_info_validation$id_measurement_test[[i]]) |>
-          dplyr::mutate(
-            y = 
-              y |>
-              scale(center = d_model_info$y_center[[1]], scale = d_model_info$y_scale[[1]]) |>
-              as.numeric()
-          ) |>
-          dplyr::pull(y)
-      )
-    
-    if(d_model_info$y_has_error[[1]]) {
-      newdata <- 
-        newdata |>
-        dplyr::mutate(
-          y_err =
-            d_model_info$y[[1]] |>
-            dplyr::filter(d_model_info$id_measurement_all[[1]] %in% d_model_info_validation$id_measurement_test[[i]]) |>
-            dplyr::mutate(
-              y_err = 
-                y_err |>
-                scale(center = FALSE, scale = d_model_info$y_scale[[1]]) |>
-                as.numeric()
-            ) |>
-            dplyr::pull(y_err)
+  id_measurement_test <- 
+    irp_d_model_info_enriched_2$data_partition[[1]] |>
+    dplyr::filter(for_prospectr_test) |>
+    dplyr::pull(id_measurement)
+  
+  newdata <- 
+    tibble::tibble(
+      y = 
+        irp_d_model_info_enriched_2$y[[1]]$y[irp_d_model_info_enriched_2$id_measurement_all[[1]] %in% id_measurement_test] |>
+        scale(
+          center = irp_d_model_info_enriched_2$y_center[[1]], 
+          scale = irp_d_model_info_enriched_2$y_scale[[1]]
         ) |>
-        dplyr::relocate(
-          y_err, .after = "y"
-        )
-    }
-    
-    brms::log_lik(
-      object = irp_fit_1_validation[[i]],
-      newdata = newdata,
-      re_formula = NULL
+        as.numeric(),
+      x = 
+        irp_d_model_info_enriched_2$x_train[[1]] |>
+        tibble::as_tibble() |>
+        dplyr::filter(irp_d_model_info_enriched_2$id_measurement_all[[1]] %in% id_measurement_test) |>
+        as.matrix(),
+      y_err = 
+        if(irp_d_model_info_enriched_2$y_has_error) {
+          irp_d_model_info_enriched_2$y[[1]]$y_err[irp_d_model_info_enriched_2$id_measurement_all[[1]] %in% id_measurement_test] |> 
+            scale(
+              center = 0, 
+              scale = irp_d_model_info_enriched_2$y_scale[[1]]
+              ) |>
+            as.numeric()
+        } else {
+          NULL
+        }
     )
-    
-  }) |>
-    irp_do_call("cbind") |>
+  
+  brms::log_lik(
+    object = irp_fit_1,
+    newdata = newdata,
+    re_formula = NULL
+  ) |>
     loo::elpd()
   
 }
@@ -1815,188 +2130,5 @@ irp_make_validation_elpd_compare <- function(irp_fit_1_validation_elpd, irp_d_mo
 
 
 
-#' Collects measured values and predictions for all models
-#' 
-#' @export
-irp_fit_1_make_y_yhat <- function(d_model_info_validation, d_model_info, irp_fit_1_validation_config, irp_fit_1_validation, irp_data_model_preprocessed, irp_fit_1, irp_isotope_standards_isotope_fraction, irp_validation_folds, file = "targets_rvars/irp_y_yhat.rds") {
-  
-  res_test <- 
-    purrr::map(seq_len(nrow(d_model_info_validation)), function(i) {
-      
-      x <- 
-        irp_data_model_preprocessed[[d_model_info_validation$id_preprocessing[[i]]]] |>
-        dplyr::filter(id_measurement %in% d_model_info_validation$id_measurement_test[[i]]) |>
-        ir::ir_scale(
-          center = irp_fit_1_validation_config[[i]]$irp_preprocess$scale_center, 
-          scale = irp_fit_1_validation_config[[i]]$irp_preprocess$scale_scale
-        )
-      
-      newdata <- 
-        irp_predict_for_eb1079_helper_1(
-          x = x, 
-          config = irp_fit_1_validation_config[[i]]
-        ) |>
-        dplyr::mutate(
-          y = 
-            d_model_info$y[[1]] |>
-            dplyr::filter(d_model_info$id_measurement_all[[1]] %in% d_model_info_validation$id_measurement_test[[i]]) |>
-            dplyr::mutate(
-              y = 
-                y |>
-                scale(center = d_model_info$y_center[[1]], scale = d_model_info$y_scale[[1]]) |>
-                as.numeric()
-            ) |>
-            dplyr::pull(y)
-        )
-      
-      if(d_model_info$y_has_error[[1]]) {
-        newdata <- 
-          newdata |>
-          dplyr::mutate(
-            y_err =
-              d_model_info$y[[1]] |>
-              dplyr::filter(d_model_info$id_measurement_all[[1]] %in% d_model_info_validation$id_measurement_test[[i]]) |>
-              dplyr::mutate(
-                y_err = 
-                  y_err |>
-                  scale(center = FALSE, scale = d_model_info$y_scale[[1]]) |>
-                  as.numeric()
-              ) |>
-              dplyr::pull(y_err)
-          ) |>
-          dplyr::relocate(
-            y_err, .after = "y"
-          )
-      }
-      
-      res <- 
-        tibble::tibble(
-          id_model = d_model_info$id_model,
-          y = newdata$y,
-          id_measurement = d_model_info_validation$id_measurement_test[[i]],
-          id_validation_fold = i,
-          yhat = 
-            brms::posterior_predict(
-              irp_fit_1_validation[[i]],
-              re_formula = NULL,
-              newdata = newdata
-            ) |>
-            posterior::rvar()
-        ) |>
-        dplyr::mutate(
-          dplyr::across(
-            dplyr::all_of(c("y", "yhat")),
-            function(.x) {
-              .x |>
-                magrittr::multiply_by(d_model_info$y_scale[[1]]) |>
-                magrittr::add(d_model_info$y_center[[1]])
-            }
-          )
-        )
-      
-      # convert atom fraction to delta values
-      if(stringr::str_detect(d_model_info$target_variable, pattern = "^(d13C|d15N)")) {
-        isotope <- stringr::str_extract(d_model_info$target_variable, pattern = "^(d13C|d15N)")
-        r <- 
-          switch(
-            isotope,
-            "d13C" = irp_isotope_standards_isotope_fraction$r_13C,
-            "d15N" = irp_isotope_standards_isotope_fraction$r_15N
-          )
-        res <- 
-          res |>
-          dplyr::mutate(
-            dplyr::across(
-              dplyr::all_of(c("y", "yhat")),
-              function(.x) {
-                if(is.numeric(.x)) {
-                  irp_atom_fraction_to_delta(.x, r = r)  
-                } else {
-                  posterior::rfun(irp_atom_fraction_to_delta, rvar_args = "x")(.x, r = r)
-                }
-              }
-            )
-          )
-      }
-      
-      res
-      
-    }) |>
-    irp_do_call("rbind") |>
-    dplyr::select(-y) |>
-    dplyr::rename(
-      yhat_test = "yhat"
-    )
-  
-  res_train <- 
-    tibble::tibble(
-      y = d_model_info$y[[1]]$y,
-      id_measurement = d_model_info$id_measurement_all[[1]], 
-      yhat = 
-        brms::posterior_predict(
-          irp_fit_1,
-          re_formula = NULL,
-          newdata = NULL
-        ) |>
-        posterior::rvar()
-    ) |>
-    dplyr::mutate(
-      dplyr::across(
-        dplyr::all_of(c("yhat")),
-        function(.x) {
-          .x |>
-            magrittr::multiply_by(d_model_info$y_scale[[1]]) |>
-            magrittr::add(d_model_info$y_center[[1]])
-        }
-      )
-    )
-  
-  # convert atom fraction to delta values
-  if(stringr::str_detect(d_model_info$target_variable, pattern = "^(d13C|d15N)")) {
-    isotope <- stringr::str_extract(d_model_info$target_variable, pattern = "^(d13C|d15N)")
-    r <- 
-      switch(
-        isotope,
-        "d13C" = irp_isotope_standards_isotope_fraction$r_13C,
-        "d15N" = irp_isotope_standards_isotope_fraction$r_15N
-      )
-    res_train <- 
-      res_train |>
-      dplyr::mutate(
-        dplyr::across(
-          dplyr::all_of(c("y", "yhat")),
-          function(.x) {
-            if(is.numeric(.x)) {
-              irp_atom_fraction_to_delta(.x, r = r)  
-            } else {
-              posterior::rfun(irp_atom_fraction_to_delta, rvar_args = "x")(.x, r = r)
-            }
-          }
-        )
-      )
-  }
-  
-  res <- 
-    dplyr::bind_cols(
-      res_train |>
-        dplyr::rename(
-          yhat_train = "yhat"
-        ),
-      res_test[match(res_train$id_measurement, res_test$id_measurement), ] |>
-        dplyr::select(-id_measurement),
-      irp_validation_folds[match(res_train$id_measurement, irp_validation_folds$id_measurement), ] |>
-        dplyr::select(id_cv_group_all)
-    ) |>
-    dplyr::mutate(
-      dplyr::across(
-        dplyr::starts_with("yhat_"),
-        mean
-      )
-    )
-  
-  saveRDS(res, file = file)
-  
-  file
-  
-}
+
 

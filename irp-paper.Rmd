@@ -1,0 +1,527 @@
+---
+title: "Prediction of Peat Properties from Transmission Mid-Infrared Spectra in the Peatland Mid-Infrared Spectra Database"
+# subtitle: Do you have a subtitle? If so, write it here
+# titlerunning: Short form of title (if too long for head)
+# authorrunning: Short form of author list if too long for running head
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+journal: "`r rticles::copernicus_journal_abbreviations(journal_name = 'SOIL')`"
+author:
+  - given_name: Henning
+    surname: Teickner
+    affiliation: "1, 2"
+    email: henning.teickner@uni-muenster.de
+    corresponding: true
+  - given_name: Klaus-Holger
+    surname: Knorr
+    affiliation: "1"
+    email: klaus-holger.knorr@uni-muenster.de
+#
+affiliation:
+  - code: 1
+    address: Ecohydrology & Biogeochemistry Group, Institute of Landscape Ecology, University of Münster, 48149, Germany
+  - code: 2
+    address: Spatiotemporal Modelling Lab, Institute for Geoinformatics, University of Münster, 48149, Germany
+bibliography: '`r targets::tar_read(irp_references_file)`'
+running:
+  title: Prediction of Peat Properties from Transmission MIRS
+  author: Teickner and Knorr
+# This section is mandatory even if you declare that no competing interests are present.
+competinginterests: |
+  The authors declare no competing interests.
+# See https://publications.copernicus.org/for_authors/licence_and_copyright.html, normally used for transferring the copyright, if needed. 
+# Note: additional copyright statements for affiliated software or data need to be placed in the data availability section. 
+copyrightstatement: |
+#  The author's copyright for this publication is transferred to institution/company. 
+### The following commands are for the statements about the availability of data sets and/or software code corresponding to the manuscript.
+### It is strongly recommended to make use of these sections in case data sets and/or software code have been part of your research the article is based on.
+### Note: unless stated otherwise, software and data affiliated with the manuscript are assumed to be published under the same licence as the article (currently Creative Commons 4.0)
+availability:
+  #code: |
+  #  use this to add a statement when having only software code available
+  #data: |
+  #  use this to add a statement when having only data sets available
+  codedata: |
+    Data and code to reproduce this manuscript are available from [---todo:ref]. The data used in this study are from the pmird database [@Teickner.2025c], @Wang.2015b, @Liu.2019, @OConnor.2020, and @Gnatowski.2022. The models computed in this study are available in the irpeatmodels package [@Teickner.2025g] and can be used with the irpeat package [@Teickner.2025l]. The gap-filled subsets of the pmird database are available from [@Teickner.2025k].
+#  sample: |
+#    use this section when having geoscientific samples available
+# videosupplement: |
+#  use this section when having video supplements available
+authorcontribution: |
+  HT: Conceptualization, methodology, software, validation, formal analysis, investigation, data curation, writing - original draft, visualization, project administration. KHK: supervision, funding acquisition, writing - review & editing.
+disclaimer: |
+#  We like Copernicus.
+acknowledgements: |
+    This study was funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) grant no. KN 929/23-1 to Klaus-Holger Knorr and grant no. PE 1632/18-1 to Edzer Pebesma.
+appendix:
+language: english # set the manuscript language. The copernicus.cls supports: english, german, and french
+output: 
+  bookdown::pdf_book:
+    base_format: rticles::copernicus_article
+    keep_tex: true
+#fontsize: 12pt
+#link-citations: true
+header-includes:
+  - \usepackage{float}
+  - \usepackage{booktabs}
+  - \usepackage{xr} \externaldocument[si-]{irp-supporting-info}  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, fig.align='center', fig.pos = 'H')
+```
+
+```{r packages, include=FALSE}
+library(knitr)
+library(kableExtra)
+library(pmird)
+library(targets)
+library(magrittr)
+library(bib2df)
+```
+
+
+```{r}
+targets::tar_source()
+targets::tar_load(irp_supporting_info)
+targets::tar_load(irp_pmird_citations)
+targets::tar_load(irp_d_model_info_enriched_1)
+targets::tar_load(irp_mir_preprocessing_settings)
+targets::tar_load(irp_mcmc_settings_horseshoe)
+targets::tar_load(irp_fit_1_map_evaluation_1)
+targets::tar_load(irp_pmird_mirs)
+targets::tar_load(irp_table_2)
+targets::tar_load(irp_table_3)
+```
+
+
+
+```{r, results='asis'}
+cat(irp_make_author_list(rmarkdown::metadata$authors))
+cat("  \n")
+cat("  \n")
+cat(irp_make_affiliation_list(rmarkdown::metadata$affiliations))
+```
+
+
+# Introduction
+
+Northern peatlands are projected to both become a larger sink and source for greenhouse gases [@Frolking.2011; @Qiu.2022]. However, these projections have large uncertainties: They range from an estimated net emission of 0.2 to an estimated net carbon sequestration of 0.1 Pg C yr$^{-1}$ [@Qiu.2022]. Also peatland C stock estimates are highly uncertain, ranging from ~270 to 1045 Pg [@Yu.2012; @Nichols.2019]. Some fraction of this uncertainty is caused by a lack of knowledge on processes, their incomplete representation in models [@Loisel.2021; @Qiu.2022], a high spatial variability of peat properties [@Frolking.2011; @Loisel.2014; @Loisel.2017; @Normand.2021; @Qiu.2022], and a lack of systematic data collections.  
+It would be possible to address errors due to unknown peat properties and stocks with more data on peat properties. Such data could be used to interpret and compare individual peat cores, quantify global peat properties at sufficient spatial resolution, constrain parameter estimates in peatland models, and test peatland models and hypotheses on peatland processes [@Loisel.2014]. Existing databases on global and regional peat properties partly address these needs [@Zoltai.2000; @Charman.2013; @Loisel.2014; @Treat.2016; @Gallego-Sala.2018; @Leifeld.2020]. However, they still have large gaps in terms of spatial coverage (e.g. @Loisel.2017) and the peat properties considered.  
+For example, one of the largest database on peat properties [@Loisel.2014] contains peat ages, bulk densities, C and N contents, but other peat properties, such as nutrient contents, hydraulic properties, and availability of labile organic matter also play a pivotal role in peatland models [e.g., @Yu.2001a; @Bauer.2004; @Frolking.2010; @Baird.2012; @Mahdiyasa.2022; @Qiu.2022] and are not part of this database. Even though similar databases exist for such data, they are much smaller, containing not only fewer samples, but also covering smaller geographical areas [e.g., @Liu.2019; @OConnor.2020].  
+A major obstacle towards addressing these limitations is that data collection is difficult in practice: Collection and analysis of peat cores are costly and resource limitations constrain both the number of peat samples collected and the set of peat properties measured. Examples for such resource limitations are restricted access to measurement devices, lack of funding, lack of time, or simply the fact that the amount of peat in a given sample is limited; this makes it difficult to measure all peat properties at high spatio-temporal resolution [e.g., @Zaccone.2018].  
+A promising approach to address this problem has been developed for mineral soils: Soil spectroscopy combined with spectral prediction models can reduce the time and cost of the measurements of diverse soil properties at an accuracy partly competitive to traditional measurement methods [@ViscarraRossel.2008; @Nocita.2015; @Hartmann.2019; @Sanderman.2020]. This approach requires few sample preprocessing steps and only one infrared spectrum needs to be measured to predict soil properties as diverse as carbon content, bulk density, and pH value [e.g., @Nocita.2015; @Dangal.2019]. In addition, spectral prediction models can be combined with pedotransfer functions to predict soil properties which are only rarely measured together with spectra [e.g., @McBratney.2006]. In case of peat, this would be in particular useful to predict peat hydraulic and thermal properties since these are rarely measured together with spectra [e.g., @Teickner.2025c]. Within the last years, databases, modeling approaches, and user interfaces have been improved to an extent that many traditional measurements can be replaced at a minimal trade-off for accuracy [e.g., @Shepherd.2022; @Hengl.2021].  
+Even though aforementioned databases and models also comprise peat, peat soils are still underrepresented in prediction models (even the largest databases contain no more than several hundred to 1000 samples which may be classified as peat based on their C content, see for example @Sanderman.2020, @Helfenstein.2021, and @Hengl.2021). Moreover, existing mineral soil databases target soil properties linked to agriculture and forestry. Peatland research often targets stocks, indicators for peat degradation, and modeling ecosystem processes and for this requires additional soil properties, for example loss on ignition, total sulfur contents, stable isotope abundances, and porosity. Finally, many existing studies use different spectroscopic measurement techniques (transmission mid-infrared spectroscopy, visible and near-infrared spectroscopy, or mid-infrared diffuse reflectance spectroscopy). In summary, existing spectral libraries and prediction services can be very useful to predict some peat properties (e.g., C, N content, bulk density) with some spectral data, but there still is a need for complementary spectral libraries and prediction models dedicated to the specific questions and approaches of peatland research.  
+There are many spectral prediction models exclusively for peat, but these are still in an early phase of development in comparison to those for mineral soils [@Downey.1986; @Bergner.1993; @McTiernan.1998; @Chapman.2001; @Ludwig.2006; @Rinnan.2007; @Artz.2008; @Terhoeven-Urselmans.2008; @Lang.2009; @Laiho.2014; @Hayes.2015; @Perez-Rodriguez.2016; @Hodgkins.2018; @Strakova.2020; @Helfenstein.2021; @Teickner.2022]. Major limitations in comparison to state of the art studies for mineral soils are the following: First, many of the computed models are probably unrepresentative for many new samples and likely have low reliability and predictive accuracy because they were computed with samples from only few peat cores [e.g., @McTiernan.1998; @Chapman.2001]. Second, even though there exist many prediction models, there are some often used peat properties for which no prediction models for peat has been developed yet (e.g., some nutrient contents, C and N isotope values, peat hydraulic, thermal and thermodynamic properties). Third, several newer and important concepts in state of the art mineral soil studies have not yet been applied in the development of prediction models for peat: prediction domains (@Wadoux.2021; see also @Sanderman.2020 and @Shepherd.2022 for some recent examples), propagation of prediction errors [e.g., @ViscarraRossel.2008; @Shepherd.2022; @Padarian.2022], open accessibility of model data and code [@Hengl.2021; @Shepherd.2022], and software that allows non-experts to generate predictions and check their reliability [@Hengl.2021; @Shepherd.2022]. We will discuss each of these concepts in turn.  
+The prediction domain (sometimes referred to as calibration space, predictor space, or feature space) is the range of the spectra for which a model has been computed and validated [@Wadoux.2021]. If a new spectrum is outside this range, a prediction model may still produce accurate predictions, but there is no guaranty for this because the model was not trained and tested on such extreme samples. Checking whether a new spectrum is within the prediction domain is therefore a first rule of thumb to decide whether to trust predictions and their uncertainties [e.g., @Shepherd.2022].  
+Many studies which use spectral prediction models to analyze peat ignore prediction errors. This can lead to overly confident inferences [e.g., @Hodgkins.2018; @Moore.2019; @Baysinger.2022]. Prediction models should propagate errors, such that they can be appropriately included in subsequent analyses. Computing prediction errors is both a matter of developing statistical approaches which allow to compute reliable estimates of prediction errors and of software which allows scientists to easily access prediction errors.  
+Making raw spectra and code for spectral preprocessing and computation of models accessible is one of the largest current efforts in the development of spectral prediction models for mineral soils [@Hengl.2021; @Shepherd.2022]. This allows others to use, to criticize, and to improve prediction models. The advantages therefore are improved reliability, more engagement between developers and users of models, and faster, more efficient, improvement of models. In contrast, only few of the peatland models we are aware of are openly accessible, including the underlying data [@Hodgkins.2018; @Teickner.2021c; @Teickner.2022; @Teickner.2022c].  
+Finally, recent projects target the development of estimation services to allow non-experts to easily generate predictions [@Shepherd.2022]. These estimation services are web applications which estimate soil properties based on spectra you have uploaded, while taking care of spectral preprocessing and reliability checks in the background (e.g., whether spectra are within the prediction domain) [@Shepherd.2022]. Ultimately, this makes spectral prediction models widely accessible to scientists who can then quickly fill existing data gaps.  
+To summarize, spectral prediction models for mineral soils currently have higher quality standards than existing models for peat, and are openly accessible and easier to use. Our study aims to develop spectral prediction models for many peat properties relevant in peatland research, which use transmission mid-infrared spectra and meet quality standards set by models for mineral soils. More specifically, we want to:
+
+1. Develop openly available spectral prediction models for many peat properties relevant in peatland research.
+
+2. Provide prediction domains for all these models as reliability check for predictions.
+
+3. Propagate errors from data (where available) and parameters to predictions.
+
+4. Fill data gaps in the pmird database, one of the largest open databases focusing on peat and mid-infrared spectra [@Teickner.2025c], to support peatland research.
+
+To this end, we computed spectral prediction models for element contents (C, H, N, O, P, S, K, Ca, Si, Ti), element ratios (C/N, H/C, O/C), isotope values ($\delta^{13}$C, $\delta^{15}$N), physical properties (bulk density (BD), loss on ignition (LOI) macroporosity, non-macroporosity, volume fraction of solids, saturated hydraulic conductivity ($K_\text{s}$), specific heat capacity ($c_\text{p}$), dry thermal conductivity ($K_\text{T}$)), standard Gibbs free energy of formation ($\Delta\text{G}_\text{f}^0$), and nominal oxidation state of C (NOSC) [@Masiello.2008]. To our knowledge, our study is the first test to compute prediction models for some of these variables (O, K, Ca, Si, Ti contents, H/C, O/C, $\delta^{13}$C, $\delta^{15}$N, $\Delta\text{G}_\text{f}^0$, NOSC, LOI). The models were computed and validated with data from one of the largest open accessible peat spectral libraries [@Teickner.2025c] which makes them representative for more diverse peat samples than most existing models that focus on peat. While some of our models may only generate approximate predictions, many have prediction errors small enough to be useful in diverse applications.   
+Bayesian data analysis was used to propagate errors from model parameters and data (where measurement errors are known) to predictions. We made the models openly accessible via the R packages irpeatmodels [@Teickner.2025g] and irpeat [@Teickner.2025l]. For all computed models and those already implemented in both packages, we also computed prediction domains. Finally, we extended irpeat to allow making predictions with a few lines of code, where spectral preprocessing and basic checks for the reliability of predictions are performed in the background.
+
+```{r p-irpeat-workflow, out.width="100%", fig.cap="Workflow how to use the models developed in this study to estimate peat properties."}
+knitr::include_graphics("figures/irp_workflow.pdf")
+```
+
+The models can be used to estimate peat properties in a workflow as shown in Fig. \@ref(fig:p-irpeat-workflow). We demonstrate the usefulness of the models and the workflow to fill gaps in databases by predicting these peat properties for samples in the pmird database. This makes pmird to one of the largest open access collections of, for example, peat element contents (C, H, O, N, P, S, K, Ca, Si, Ti) and thermodynamic properties ($\Delta \text{G}_\text{f}^0$).  
+<!--The spectral prediction models computed here are a step towards offering transmission-mid-infrared prediction models for many peat properties relevant in peatland research which meet standards set by models for mineral soils in terms of quality, openness, and ease of use by non-experts for spectral modelling. Interpretation of individual peat cores, quantification of peat properties on a global scale and at high spatial resolution, and estimation and testing of peatland models all can benefit from these models, improving our understanding of the future dynamics of peatlands.-->
+
+
+# Methods
+
+## Target variables
+
+Table \@ref(tab:irp-tab-target-variables) summarizes the peat properties (target variables) for which we computed models. The variables were selected because they can be used to understand and quantify important processes in peatlands and because many of them cannot be predicted with existing models [e.g., @Sanderman.2020; @Shepherd.2022]. 
+
+
+(ref:definition-target-variable-nosc) Nominal oxidation state of carbon as defined in @Masiello.2008.
+
+(ref:definition-target-variable-macroporosity) The total volume of macropores (as defined in @Liu.2019) divided by the total volume of a sample.
+
+(ref:definition-target-variable-non-macroporosity) The total volume of non-macropores (as defined in @Liu.2019) divided by the total volume of a sample.
+
+(ref:significance-target-variable-bulk-density) Quantifying peat hydraulic properties [@Liu.2019]. Quantifying storage of chemical elements. Quantifying peat degree of decomposition [e.g., @Chambers.2011].
+
+(ref:definition-target-variable-volume-fraction-of-solids) The total volume of solids divided by the total volume of a sample (one minus macroporosity minus non-macroporosity).
+
+(ref:significance-target-variable-macroporosity) Quantifying peat hydraulic properties [@Liu.2019], modeling peat thermal properties and water storage [e.g., @Weiss.2006].
+
+(ref:significance-target-variable-non-macroporosity) Quantifying peat hydraulic properties [@Liu.2019], modeling peat thermal properties and water storage [e.g., @Weiss.2006].
+
+(ref:significance-target-variable-volume-fraction-of-solids) Quantifying gas volume in peat. Quantifying total porosity. Quantifying solid matter mass density of peat. Modeling peat thermal properties and water storage [e.g., @Weiss.2006].
+
+(ref:significance-target-variable-titanium-content) Quantifying peat Ti stocks. Quantifying mineral dust inputs and degree of decomposition [@Shotyk.1996; @Holzer.1998; @Galka.2022a].
+
+(ref:significance-target-variable-nitrogen-content) Quantifying peat N stocks. Quantifying N limitation [e.g., @Koerselman.1996; @OldeVenterink.2003; @Wang.2014a; @Wieder.2022].
+
+(ref:significance-target-variable-phosphorus-content) Quantifying peat P stocks. Quantifying nutrient limitations [e.g., @Koerselman.1996; @OldeVenterink.2003; @Wang.2014a; @Wieder.2022]. 
+
+(ref:significance-target-variable-potassium-content) Quantifying peat K stocks. Quantifying nutrient limitations [e.g., @OldeVenterink.2003; @Wang.2014a; @Wieder.2022]. 
+
+(ref:significance-target-variable-sulfur-content) Quantifying peat S stocks. Quantifying nutrient limitations [e.g., @Wieder.2022] and atmospheric S deposition [e.g., @Moore.2005; @Wieder.2016]. 
+
+(ref:significance-target-variable-d13C) Estimating the degree of decomposition [@Nadelhoffer.1988; @Lerch.2011; @Biester.2014], moisture conditions during photosynthesis [@Williams.1996; @Schmidt.2014; @Xia.2020], contribution of sequestered C from methane [@Larmola.2010 @Schmidt.2014]. Note that there are a lot of unclear confounding factors [e.g. @Williams.1996; @Asada.2005; @Bragazza.2009; @Drollinger.2019].
+
+(ref:significance-target-variable-d15N) Estimating the degree of decomposition (e.g. @Drollinger.2019, but see @Asada.2005a, @Biester.2014), vegetation nitrogen source [@Asada.2005a].
+
+(ref:significance-target-variable-dgf0) Quantifying peat degree of decomposition [e.g., @Worrall.2018], quantifying thermodynamic feasibility of reactions.
+
+(ref:significance-target-variable-hc) Estimating the degree of decomposition [e.g.,  @Bader.2018; @Zaccone.2018; @Moore.2018a; @Leifeld.2020], estimating the relative abundance of organic matter fractions from Van Krevelen diagrams [e.g., @Kim.2003, @Bader.2018].
+
+(ref:significance-target-variable-oc) Estimating the degree of decomposition [e.g.,  @Bader.2018; @Zaccone.2018; @Moore.2018a; @Leifeld.2020], estimating the relative abundance of organic matter fractions from Van Krevelen diagrams [e.g., @Kim.2003, @Bader.2018].
+
+(ref:significance-target-variable-nc) Estimating the degree of decomposition [e.g., @Malmer.1984; @Kuhry.1996; @Biester.2014; @Leifeld.2020] and nutrient limitations [e.g., @Bauer.2004].
+
+(ref:Liu2019) @Liu.2019
+
+(ref:Masiello2008-textual) @Masiello.2008
+
+(ref:Masiello2008) [@Masiello.2008]
+
+(ref:definition-saturated-hydraulic-conductivity) The saturated hydraulic conductivity of a sample as defined in @Liu.2019. 
+
+(ref:definition-dry-thermal-conductivity) The dry thermal conductivity of a sample as defined in @OConnor.2020. 
+
+(ref:definition-specific-heat-capacity) The specific heat capacity of a sample as defined in @Gnatowski.2022. 
+
+(ref:significance-saturated-hydraulic-conductivity) Quantifying peat hydraulic properties [@Liu.2019], modeling water flow [e.g., @Granberg.1999; @Weiss.2006]. 
+
+(ref:significance-dry-thermal-conductivity) Quantifying peat thermal properties, modeling heat flow. Modeling peat thermal properties [e.g., @Granberg.1999; @Weiss.2006].
+
+(ref:significance-specific-heat-capacity) Modeling peat thermal properties [e.g., @Granberg.1999; @Weiss.2006].
+
+(ref:significance-target-variable-calcium-content) Estimating peat Ca stocks. Quantifying minerotrophy [e.g., @Waughman.1980; @Wang.2015a].
+
+(ref:irp-tab-target-variables-caption) Overview on the peat properties for which we computed prediction models. "Has model" indicates whether we computed a spectral prediction model for the target variable ("yes") or a pedotransfer function which uses bulk density or N content to predict the variable ("no"). "Likelihood" is the likelihood used in the prediction model for each target variable (see subsection \@ref(dd-methods-prediction-models)).
+
+```{r irp-tab-target-variables, tab.cap='(ref:irp-tab-target-variables-caption)'}
+irp_d_model_info_enriched_1 |>
+  dplyr::select(target_variable) |>
+  dplyr::filter(! duplicated(target_variable)) |>
+  dplyr::mutate(
+    index_target_variable = irp_get_order_target_variables(x = target_variable)
+  ) |>
+  dplyr::arrange(index_target_variable) |>
+  dplyr::pull(target_variable) |>
+  irp_get_tv_table() |>
+  dplyr::mutate(
+    significance = 
+      dplyr::case_when(
+        variable == "carbon_content" ~ "Estimating peat C stocks.",
+        variable == "hydrogen_content" ~ "Estimating peat H stocks.",
+        variable == "nitrogen_content" ~ "(ref:significance-target-variable-nitrogen-content)",
+        variable == "oxygen_content" ~ "Estimating peat O stocks.",
+        variable == "sulfur_content" ~ "(ref:significance-target-variable-sulfur-content)",
+        variable == "phosphorus_content" ~ "(ref:significance-target-variable-phosphorus-content)",
+        variable == "potassium_content" ~ "(ref:significance-target-variable-potassium-content)",
+        variable == "calcium_content" ~ "(ref:significance-target-variable-calcium-content)",
+        variable == "titanium_content" ~ "(ref:significance-target-variable-titanium-content)",
+        variable == "silicon_content" ~ "Estimating peat Si stocks. Estimating peat mineral inputs.",
+        variable == "d13C" ~ "(ref:significance-target-variable-d13C)",
+        variable == "d15N" ~ "(ref:significance-target-variable-d15N)",
+        variable == "nosc" ~ "Estimating degree of decomposition. Computation of the oxidative ratio (ref:Masiello2008).",
+        variable == "dgf0" ~ "(ref:significance-target-variable-dgf0)",
+        variable == "loss_on_ignition" ~ "Estimating organic matter pools and mineral pools. Quantifying degree of decomposition.",
+        variable == "bulk_density" ~ "(ref:significance-target-variable-bulk-density)",
+        variable == "C_to_N" ~ "(ref:significance-target-variable-nc)",
+        variable == "O_to_C" ~ "(ref:significance-target-variable-oc)",
+        variable == "H_to_C" ~ "(ref:significance-target-variable-hc)"
+      )
+  ) |>
+  dplyr::left_join(
+    irp_d_model_info_enriched_1 |>
+      dplyr::filter(! duplicated(paste0(target_variable, "_", likelihood_name))) |>
+      dplyr::select(target_variable, likelihood_name) |>
+      dplyr::rename(
+        variable = "target_variable"
+      ) |>
+      dplyr::mutate(
+        likelihood_name =
+          dplyr::case_when(
+            likelihood_name == "Gaussian" ~ "Normal",
+            TRUE ~ likelihood_name
+          )
+      ),
+    by = "variable"
+  ) |>
+  dplyr::mutate(
+    variable = 
+      irp_get_names_target_variables(
+        variable, 
+        what = "target_variable_name_latex_long"
+      ),
+    significance =
+      dplyr::case_when(
+        is.na(significance) ~ "",
+        TRUE ~ significance
+      ),
+    has_spectral_prediction_model = "yes"
+  ) |>
+  dplyr::relocate(likelihood_name, .after = dplyr::everything()) |>
+  dplyr::bind_rows(
+    tibble::tibble(
+      variable = c("Macroporosity", "Non-macroporosity", "Volume fraction of solids", "Saturated hydraulic conductivity", "Dry thermal conductivity", "Specific heat capacity"),
+      definition = c("(ref:definition-target-variable-macroporosity)", "(ref:definition-target-variable-non-macroporosity)", "(ref:definition-target-variable-volume-fraction-of-solids)", "(ref:definition-saturated-hydraulic-conductivity)", "(ref:definition-dry-thermal-conductivity)", "(ref:definition-specific-heat-capacity)"),
+      significance = c("(ref:significance-target-variable-macroporosity)", "(ref:significance-target-variable-non-macroporosity)", "(ref:significance-target-variable-volume-fraction-of-solids)", "(ref:significance-saturated-hydraulic-conductivity)", "(ref:significance-dry-thermal-conductivity)", "(ref:significance-specific-heat-capacity)"),
+      likelihood_name = c(rep("Dirichlet", 3), "beta", "gamma", "gamma"),
+      has_spectral_prediction_model = "no"
+    )
+  ) |>
+  dplyr::mutate(
+    likelihood_name = 
+      dplyr::case_when(
+        ! likelihood_name %in% c("Dirichlet") ~ tolower(likelihood_name),
+        TRUE ~ likelihood_name
+      )
+  ) |>
+  kableExtra::kable(
+    format = "latex",
+    booktabs = TRUE, 
+    longtable = FALSE,
+    escape = FALSE, 
+    row.names = FALSE,
+    col.names = c("Variable", "Definition", "Relevance", "Has model", "Likelihood")
+  ) |>
+  kableExtra::kable_styling(latex_options = c("scale_down", "HOLD_position")) |>
+  kableExtra::column_spec(1, width = "6em") |>
+  kableExtra::column_spec(2, width = "18em")|>
+  kableExtra::column_spec(3, width = "50em")
+```
+
+
+## Data sources
+
+The prediction models were computed with a subset of the pmird database [@Teickner.2025c; `r paste0("@", irp_pmird_citations) |> paste(collapse = "; ")`]. The pmird database is a collection of infrared spectra and other chemical and physical properties of peat, peat forming vegetation, and dissolved organic matter (DOM). For many peat variables, the database has data from several different sites and covers global gradients of conditions under which peat is formed. This makes the models more representative for many peat properties than existing models [@Bergner.1993; @Chapman.2001; @Artz.2008; @Helfenstein.2021].  
+We did not use spectra that were classified as already baseline corrected in the pmird database [@Teickner.2025c], except for those from dataset `r irp_pmird_mirs |> dplyr::filter(stringr::str_detect(core_label, "^peatbog")) |> dplyr::pull(id_dataset) |> unique()` where we checked that the corrected spectra are similar to the result of our procedure here, to avoid that differences in preprocessing would decrease the predictive accuracy of the models. The pmird database contains a comparatively small number of vegetation and dissolved organic matter (DOM) samples and we therefore do not consider our models applicable to DOM or vegetation in general, except for *Sphagnum* which forms the bulk undecomposed peat material in bogs. Since DOM can have spectral properties different from peat, we did not include DOM samples in our models. Except for some cores, the peat is from ombrotrophic bogs, and peat with larger mineral contents and fen peat is thus underrepresented.  
+The pmird database does not contain data for saturated hydraulic conductivity, total porosity, macroporosity, volume fraction of solids, specific heat capacity, and dry thermal conductivity for samples with MIRS [@Teickner.2025c]. For these variables, we used modified versions of models from @Liu.2019, @Liu.2020, @Gnatowski.2022, and @OConnor.2020 to predict these variables from bulk density or N content. These models are described in supporting section \@ref(si-irp-sup-perdotransfer-functions). As suggested in previous studies [e.g., @McBratney.2006], these models (also known as pedotransfer functions) can be used with bulk density and N contents predicted from MIRS to predict these physical peat properties, whereby all relevant errors are propagated.  
+The pmird database also does not contain $\Delta \text{G}_\text{f}^0$ estimates. We predicted $\Delta \text{G}_\text{f}^0$ from element contents (at least C, H, N, O) using modified versions of the models from  @Thornton.1917, @Patel.1981, and @Battley.1999 for the enthalpy of combustion and the entropy of formation, as described in @Popovic.2019. These models are described in supporting section \@ref(si-irp-sup-dgf0). 
+
+
+## Spectral preprocessing
+
+All computations for this manuscript were made in R `r packageVersion("base")` [@RCoreTeam.2022]. For each of the target variables, except the physical peat properties mentioned in the previous section, we computed three spectral prediction models. The three models use differently preprocessed spectra (no derivative, first derivative, second derivative spectra), but otherwise were computed in the same way. All spectral preprocessing was done with the ir package [@Teickner.2022i]. To harmonize the spectra, we interpolated them to unit wavenumber resolution and clipped them to the range `r unique(irp_mir_preprocessing_settings$clip_range)[[1]] |> unlist() |> knitr::combine_words(and = " to ")` cm$^{-1}$. Next, we conducted an atmospheric correction of water vapor and CO$_2$ artifacts using the approach suggested in @Perez-Guaita.2013. First, we subtracted a baseline created from a Savitzky-Golay smoothed version of the spectra where regions with strong CO$_2$ peaks (645 to 695 cm$^{-1}$ and 2230 to 2410 cm$^{-1}$) [@Wallace.1997a] were linearly interpolated and then we used CO$_2$ and water vapor spectra from the pimrd R package [@Teickner.2025d] (see also @Teickner.2025c) to perform the atmospheric correction as described in @Perez-Guaita.2013. Due to differences in devices and measurement conditions, this procedure attenuated CO$_2$ artifacts, but did not remove them completely. Thereafter, the corrected spectra were baseline corrected using a convex hull procedure [@Beleites.2021], normalized using the signal normal variate (SNV), the three versions of derivative spectra were computed, and all spectra were binned with a bin width of `r unique(irp_mir_preprocessing_settings$bin_width)` cm$^{-1}$ to reduce the number of redundant predictor variables and reduce possible wavenumber shifts between measurements from different devices. Finally, we excluded intensities from 2250 to 2400 cm$^{-1}$, to avoid that remaining CO$_2$ peaks confound predictions. 
+
+
+## Prediction models {#dd-methods-prediction-models}
+
+We used normal, gamma, and beta distributions as likelihoods (Tab. \@ref(tab:irp-tab-target-variables)) and used Bayesian statistics to compute all prediction models. All models were computed with brms [@Burkner.2018], using a logit (beta regression), log (gamma regression) or identity link function (normal regression), assuming a constant shape parameter (beta, gamma) or standard deviation (normal), using a normal prior for the intercept, gamma priors for the shape parameter or standard deviation, and regularized horseshoe priors [@Piironen.2017a; @Piironen.2017b] for the slopes (for each predictor variable). The regularized horseshoe prior shrinks coefficients to zero except where they are strongly related to the response variable, conditional on other predictors. To reduce overfitting, we defined a large amount of shrinkage, by assuming that `r unique(irp_d_model_info_enriched_1$prior_b_par_ratio)[[1]] * ncol(irp_d_model_info_enriched_1$x_train[[1]])` of the `r ncol(irp_d_model_info_enriched_1$x_train[[1]])` predictor variables have non-zero coefficients [@Piironen.2017b]. The regularized horseshoe prior can lead to a complex posterior geometry that is difficult to sample from even with efficient sampling algorithms and to run most of the models without divergent transitions, we had to increase the degrees of freedom of the student-t distribution of the horseshoe prior from 1 to 3 or 4. This reduced the number of divergent transitions, but also leads to less regularization (deviation from the horseshoe shape) [@Piironen.2017b] which may lead to overfitting and less interpretable model coefficients. In our case, less regularization was not a critical limitation because our aim was not to interpret model coefficients, but to optimize predictive accuracy, and because our model validation did not indicate overfitting (Tab. \@ref(tab:irp-table-1)).  
+The posterior distributions were estimated with Markov Chain Monte Carlo (MCMC) sampling with Stan [@StanDevelopmentTeam.2021a], using `r irp_mcmc_settings_horseshoe$chains` chains, `r irp_mcmc_settings_horseshoe$warmup` warmup iterations and `r irp_mcmc_settings_horseshoe$iter - irp_mcmc_settings_horseshoe$warmup` sampling iterations per chain. Chains were initialized with pathfinder [@Zhang.2022d]. Maximum Monte Carlo standard errors [@Vehtari.2021] for predictions of the target variables by the best models (see the next section) for each target variable are shown in Tab. \@ref(tab:irp-table-1). As mentioned above, some models had divergent transitions, but at least one model per target variable did not and we only evaluate and interpret models without divergent transitions. The largest rank-normalized $\hat{R}$ for model parameters was `r irp_fit_1_map_evaluation_1 |> purrr::transpose() |> purrr::pluck("max_rhat") |> unlist() |> max() |> round(2)`, indicating convergence of the chains [@Vehtari.2021].
+
+
+## Model validation and data filtering
+
+We used the Kennard-Stone algorithm as implemented in the prospectr package [@Stevens.2013] to split the observations for each target variable into a training and a testing dataset, using the euclidean distance between the underived preprocessed spectra. The number of observations assigned to the test dataset was defined as $\min(0.8n, n_\text{max})$, where $n$ is the number of available observations for a target variable and $n_\text{max} = 200$. All models for the same target variables use the same observations for training and testing such that the models are comparable.  
+This procedure was chosen because our aim is to develop prediction models that are applicable to as diverse peat samples as possible, that is, to compute one prediction model with maximum prediction domain (the value ranges covered by all predictor variables) [@Wadoux.2021] and smallest possible prediction error across this prediction domain. The Kennard-Stone algorithm maximizes the distance between spectra covered by the training data and therefore selects a diverse training data set.  
+An ideal test of the prediction models would use test data that covers the whole spectral range of the training data and is independent of the training data, which in the case of peat samples are samples from different peatland sites. We had to deviate from this ideal because of the heterogeneity of the pmird data. In particular, because there are only few samples from few peatland sites with large carbonate or silicate contents, it would have been possible with independent observations either only to test the models over a much smaller range of spectral variation if only independent test data would have been used, or to test the predictive accuracy for spectral conditions the model was not trained on. In the first case, we would risk overfitting in the untested spectral range, and in the second case, the predictive accuracy would be underestimated due to extrapolation.
+Therefore, as an alternative, we did not separate observations from the same cores or sites when defining training and test data. This allowed us to test the models across a much larger spectral range within their prediction domains. For many target variables, the overfitting risk should be small because both the training and the test data have samples from many different sites.  
+To compare models, we used the expected log predictive density (ELPD) computed on the test data. Model evaluation was performed with the loo package [@Vehtari.2019]. Following rules of thumb [@Sivula.2022], we assumed models to have equivalent predictive performance (according to the capability of our evaluation) when the difference of their ELPD ($\Delta$ELPD) is smaller than 4, and otherwise when $\Delta$ELPD is larger than two times its standard error (using normal approximation for $\Delta$ELPD). Models with divergent transitions were not considered during model evaluation. To give an easier to interpret performance metric, we also computed the root mean square error (RMSE).  
+We do not interpret model coefficients and how this may reflect causal links between molecular structures and target variables because our model coefficients are not intended to estimate causal effects, because it is very likely that they do not represent causal effects, and because specific wavenumbers cannot be assigned unambiguously to molecular structures [e.g., @Stuart.2004]. For those interested in model coefficients, we show a plot of the model coefficients with the best model for each target variable and a table listing possible assignments to molecular structures for coefficients with a posterior probability of being larger than 0 of at least 90% or a posterior probability of being smaller than 0 of at least 90% in supporting section \@ref(si-irp-sup-model-coefficients-1).  
+
+
+<!--Our definition of training and test observations is not ideal for ... reasons. Firstly, some spectral properties are underrepresented by observations in the pmird database, in particular samples with large carbonate or silicate contents. Since the spectra of these samples have distinct peaks compared to peat with small carbonate and silicate contents, many of them are part of the training data and only few such samples are available for testing. Secondly, If there are few samples from few peat cores or one peatland only, flexible models such as spectral prediction models have a larger overfitting risk because the testing data is not independent from the training data and therefore the model may predict patterns that are specific to one peatland site only. In many cases, we could have used data from (presumably) independent cores for testing, but due to the heterogeneity of the data, we could have tested the model over a much smaller spectral range (when we would have)
+
+
+related to the first issue, the few samples with large carbonate or silicate contents are from few peat cores and therefore if we had decided  
+
+
+
+Based on our previous experience in interpreting peat MIRS, the peaks caused by silicates, carbonates, amides, carbohydrates, aromatics, and lipids [@Stuart.2004; @Tatzber.2007; @Parikh.2014], we suggest that the main gradients in peat chemistry that control spectral variation are (1) the content of silicates, (2) the content of carbonates, (3) the initial vegetation composition that controls differences in the initial content of amides (in peat mainly proteins), carbohydrates, and aromatics, and (4) the degree of decomposition, which increases the contents of amides (in peat mainly proteins), lipids, and aromatics, and decreases the overall content of carbohydrates. Since most of the pmird samples are bog peat samples, there are few silicate-rich and carbonate-rich samples. --> 
+
+## Prediction domains
+
+A regression model interpolates a target variable within the range of predictor values --- the prediction domain [@Wadoux.2021]. If such a model is used for prediction with new data that are outside the prediction domain, it is unclear how large prediction errors are, particularly for models with high dimensional prediction domain, such as spectral prediction models. Consequently, it should be checked that new data are within the prediction domain of the model [e.g., @Roberts.2017], even though this is no guaranty for accurate predictions.  
+For this reason, we computed the training prediction domain [@Wadoux.2021] for each model as the range of the predictor variable values across all training samples (training prediction domain), and a prediction domain for the test samples (test prediction domain) for each model as the range of predictor variable values across all testing samples. When samples are outside the prediction domain, predictions may be less reliable than estimated by the model validation. The difference between testing and training prediction domain shows where the models need further testing. The difference between training (or testing) prediction domain and the prediction domain formed by all relevant spectra in the pmird database indicates whether the model covers the spectral variability in the pmird database, as approximation of the spectral variability of peat in general, and therefore indicates where additional data can improve the models.  
+When making predictions with the models, irpeat checks whether the input data are within the testing or training prediction domain. This is a safety device to avoid a misuse of models and it provides information for those who want to improve our models. 
+
+## Testing the influence of confounding factors
+
+Based on previous experience in the interpretation of peat MIRS and on the peaks caused by silicates, carbonates, amides, carbohydrates, aromatics, and lipids [@Stuart.2004; @Tatzber.2007; @Parikh.2014], we suggest that the main gradients in peat chemistry that control spectral variation are (1) the content of silicates, (2) the content of carbonates, (3) the initial vegetation composition that controls differences in the initial content of amides, carbohydrates, and aromatics, and (4) the degree of decomposition, which increases the relative contents of amides, lipids, and aromatics, and decreases the overall content of carbohydrates [e.g., @Cocozza.2003]. Previous studies suggest that differences in amide contents and silicates can bias predictions [@Broder.2012; @Teickner.2022f] and similar effects are likely for carbonates, because carbonates cause dominant peaks that overlap with peaks caused by aromatics and amides [@Tatzber.2007] and because large carbonate contents usually indicate higher pH values and therefore shifts in carboxyl peaks due to deprotonation [@Ellerbrock.2021]. To test for such confounding factors, we plotted model residuals versus Ca, Si, and N measured for the same samples (residuals were not plotted for samples where Ca, Si, and N, respectively, were not measured).
+
+## Filling data gaps in the pmird database
+
+To fill data gaps in the pmird database, we used the best models for each target variable (Tab. \@ref(tab:irp-table-1)) to predict missing values for the target variables where samples have MIRS. These predictions are stored in a published data table. Moreover, we created two additional data tables that indicate, for each prediction, whether the MIRS is in the training or testing prediction domain for the respective model. We restricted gap filling to peat and litter samples with absorbance-FT-MIR spectra. In contrast to the model development, we included spectra that may have already been baseline corrected, since we the prediction domains can be used to screen spectra that are not similar to the data used to train and test the models. For variables that can be predicted without MIRS if other data are available (e.g., C, H, O, N, bulk density) with the additional models developed here ($\Delta \text{G}_\text{f}^0$, saturated hydraulic conductivity, total porosity, macroporosity, volume fraction of solids, specific heat capacity, and dry thermal conductivity) or previously published models (NOSC, C/N, H/C, O/C), we created an additional data table with predictions without MIRS. For $\Delta \text{G}_\text{f}^0$, we required C, H, O, and N contents to be measured for this; contents of other elements were included if available and otherwise the contents were set to 0 g g$^{-1}$ when computing $\Delta \text{G}_\text{f}^0$.
+
+
+# Results and discussion
+
+We developed spectral prediction models for many peat properties relevant in peatland research. In the next subsections, we evaluate these models in terms of their prediction errors estimated on test data, in terms of confounding factors, and in terms of how much of the spectral variation in the pmird database is covered by the models (prediction domains). Where other models for the same target variable are available, we compare prediction errors of our models to that from other studies. Our models are openly available via the irpeatmodels package, functions to use them are available from the irpeat package, and we show how to use these packages. Finally, to provide data that can be useful for future research, we summarize the gap-filling of the pmird database.
+
+
+## Predictive accuracy
+
+The predictive accuracy for the best models for each target variable is summarized in Tab. \@ref(tab:irp-table-1) and plots of measured versus predicted values are shown in Fig. \@ref(fig:irp-plot-14-1). Estimates for the predictive accuracy are both worse and better than that of previously published models using spectra in the visible, near infrared or mid-infrared range (Fig. \@ref(fig:irp-plot-15)), but these estimates are not directly comparable because of different modeling approaches and differences in the variability of data used to train and test the models. Studies that use large databases can use modeling approaches that require more training data but may outperform linear models, such as cubist [@Hengl.2021; @Sanderman.2020]. Another reason for differences in the predictive accuracy is the chemical diversity of the training and testing data. For example, one reason for the better predictive accuracy for C contents, N contents, and C/N reported in @Chapman.2001 certainly is that samples are from one site only which leads to less confounding between predictors and C content. Similarly, data from @Terhoeven-Urselmans.2008, @Bergner.1993, and @Artz.2008 also cover smaller gradients in peat properties than the pmird database, in particular no peat with large mineral fractions (Fig. \@ref(fig:irp-plot-15)).  
+Not only differences in the range of chemical properties, but also the distribution of observations along chemical gradients can lead to differences in estimated predictive accuracies. For example, models from @Sanderman.2020 and @Hengl.2021 for C and N contents have a better predictive accuracy and were computed with many peat samples, but the majority of observations is from mineral soils with small C and N contents. It has been repeatedly observed that prediction errors are larger for larger C contents than for smaller C contents [@Dangal.2019; @Helfenstein.2021]. These heterogeneous prediction errors are probably caused by two factors: Firstly, spectra of mineral soil have prominent mineral peaks which allow a more accurate estimation of small C contents, whereas at large OM contents there is a much more complex and diverse pattern of peaks caused by organic matter molecular structures. Secondly, whenever a variable is positive and the majority of values is small, prediction errors are smaller due to the positivity constraint. This does not only explain worse estimated predictive accuracy of our models for C and N, but can also explain why our model for bulk density has a better estimated predictive accuracy than models from @Sanderman.2020 and @Hengl.2021 because the majority of the peat samples have a small bulk density and the positivity constraint therefore implies smaller prediction errors. A last reason for a better predictive accuracy is outlier removal in previous studies not based on specific theoretical considerations [@Terhoeven-Urselmans.2008; @Sanderman.2020]. We did not remove outliers here because we wanted to develop prediction models that are applicable to a diverse range of peat samples, while outlier removal may lead to better predictive accuracy for peat samples with specific chemical properties. Overall, the modeling approach and data properties of our studies are most directly comparable to @Helfenstein.2021, who focused on C contents, and here, our model performs similarly well.  
+In summary, our models have a roughly similar or better predictive performance for some variables as have previous studies focusing exclusively on peat samples. Albeit direct comparison of prediction errors to high-quality models computed with large spectral libraries is not possible in terms of peat, it is very likely that the predictive accuracy for peat properties could be improved with more flexible modeling approaches which would, however, require more balanced data and, for some variables, more data in general.
+
+(ref:irp-table-1-caption) Overview on the predictive properties of the best models for each target variable. "Unit" is the measurement unit for all numeric variables.  "Derivative" indicates which derivative of the spectra was used in the model. "$n_\text{train}$" and "$n_\text{test}$" are training and testing sample sizes. "$\text{RMSE}_\text{test}$" is the root mean square error computed for the test data. "$\text{bias}_\text{test}$" is the average difference between predictions and measurements. "$\text{RMSE}_\text{train} - \text{RMSE}_\text{test}$" is the difference between the training RMSE and the testing RMSE ($\text{RMSE}_\text{test}$). "$\text{MCSE}_\text{mean}$", "$\text{MCSE}_\text{sd}$", "$\text{MCSE}_\text{lower}$", and "$\text{MCSE}_\text{upper}$" are maximum estimated Monte Carlo standard errors for the average, standard deviation, lower, and upper 95% prediction interval for predicted values across the training and testing data. "BD" is bulk density and "LOI" is loss on ignition.   
+
+```{r irp-table-1, tab.cap='(ref:irp-table-1-caption)'}
+res_tab <- 
+  tar_read(irp_table_1) |>
+  dplyr::filter(num_divergent == 0 & ! duplicated(target_variable)) |>
+  dplyr::select(-num_divergent, -train_rmse, -train_bias) |>
+  dplyr::mutate(
+    id_preprocessing = id_preprocessing - 1L 
+  ) |>
+  dplyr::relocate(unit, .after = "target_variable_pretty") |>
+  dplyr::relocate(y_range, .after = "n_testing_sample")
+
+stopifnot(nrow(res_tab) == length(irp_get_target_variables()))
+stopifnot(all(res_tab$elpd_diff == 0.0))
+
+res_tab  |>
+  dplyr::select(-elpd_diff, -se_diff, -target_variable, -id_model) |>
+  kableExtra::kable(
+    format = "latex",
+    booktabs = TRUE, 
+    longtable = FALSE,
+    escape = FALSE, 
+    row.names = FALSE,
+    col.names = c("Variable", "Unit", "Derivative", "$n_\\text{train}$", "$n_\\text{test}$", "Range", "$\\text{RMSE}_\\text{test}$", "$\\text{bias}_\\text{test}$", "$\\text{RMSE}_\\text{train} - \\text{RMSE}_\\text{test}$", "$\\text{MCSE}_\\text{mean}$", "$\\text{MCSE}_\\text{sd}$", "$\\text{MCSE}_\\text{lower}$", "$\\text{MCSE}_\\text{upper}$")
+  ) |>
+  kableExtra::kable_styling(latex_options = c("scale_down", "HOLD_position"))
+```
+
+(ref:irp-plot-14-1-caption) Measured versus fitted and predicted values for all target variables. For $\Delta\text{G}_\text{f}^0$, standard errors of prediction estimated by the auxiliary model (section \@ref(si-irp-sup-dgf0)) are shown as error bars. Diamond-shaped points with red borders are outliers (discussed in the text).
+
+```{r irp-plot-14-1, out.width="80%", fig.cap='(ref:irp-plot-14-1-caption)'}
+knitr::include_graphics(tar_read(irp_plot_14_1))
+```
+
+
+(ref:irp-plot-15-caption) RMSE for test data from the best models compared to RMSE for test data from other studies (a) and ranges of target variable values in the training data for the models (b). In (a), points are average values and error bars 95% confidence intervals for individual models (our models) or the ranges of average RMSE for different strata of the data, where different analyses were performed. When studies report only one point estimate, this point estimate is shown was vertical tic. In (b), error bars are ranges for target variable values in the training data.  
+
+```{r irp-plot-15, out.width="100%", fig.cap='(ref:irp-plot-15-caption)'}
+knitr::include_graphics(tar_read(irp_plot_15))
+```
+
+
+## Outliers and confounding factors
+
+There are some interesting patterns in the plots of measured versus predicted values (Fig. \@ref(fig:irp-plot-14-1)): For C, there are two outliers, one with a measured C content $>0.6$ g g$^{-1}$ and one with a measured C content $<0.1$ g g$^{-1}$ (Fig. \@ref(si-fig:irp-plot-18)). A peat sample with $>0.6$ g$_\text{C}$ g$^{-1}$ should be decomposed because litter initially has large O and H contents that cause small relative C contents and because preferential decomposition of organic matter fractions with large O and H contents (carbohydrates, phenols) leads to a relative accumulation of C [@Schellekens.2015; @Moore.2018a; @Leifeld.2020], but the spectrum does not have pronounced aromatic or lipid peaks one would expect for a peat sample with such high C content (supporting Fig. \@ref(si-fig:irp-plot-18)). A peat sample with $<0.1$ g$_\text{C}$ g$^{-1}$ must have a comparatively large mineral content because undecomposed peat forming litter has much larger C contents, yet the spectrum does not have typical silicate peaks (supporting Fig. \@ref(si-fig:irp-plot-18)). We therefore assume that either the C measurements in the pmird database are not correct for these two measurements or that spectra were incorrectly assigned to these samples.  
+For H, the plot indicates overestimation for smaller H contents and underestimation for larger H contents. Samples with smaller H contents have larger Si contents (Fig. \@ref(si-fig:irp-plot-16-3)) which suggests that predictions are confounded by silicate peaks.  
+For P and K, several samples with the largest measured P and K contents have relatively large prediction errors. These samples are *Juncus effusus* samples from a short-term NPK fertilization experiment with high nutrient loads [@Agethen.2018]. While it appears that the models can predict P and K contents reasonably well for these samples, more samples would be required to evaluate whether the model overfits to spectral characteristics of *J. effusus* litter (supporting Fig. \@ref(si-fig:irp-plot-18)) rather than spectral characteristics for high P contents in vegetation.  
+For Si, there are several samples with larger Si content for which the model overestimates Si contents, besides the four samples with maximum Si content for which the model underestimates Si contents. The overestimated samples have a large Ca content and the underestimated do not (supporting Fig. \@ref(si-fig:irp-plot-16-1)). Presence of carbonates therefore biases predictions of Si contents, even though this bias seems to be small for the training data. The one observation marked as outlier in Fig. \@ref(fig:irp-plot-14-1) may be a measurement error of Si contents or erroneously assigned spectrum to this sample because the sample does not have typical characteristics for silicate rich peat, such as a pronounced peak around 1100 cm$^{-1}$ and peaks around 1900 cm$^{-1}$ (supporting Fig. \@ref(si-fig:irp-plot-18)) [@Parikh.2014].  
+For S, larger Ca contents do not bias predictions, but they increase the residual variance indicating, similarly to Si, that peaks caused by carbonates confound predictions (Fig. \@ref(fig:irp-plot-14-1)). One reason for the difficulty to predict S contents here is that samples in the data with large S contents also contain large Ca contents, but only some samples with large Ca content have carbonate peaks. Samples with large carbonate peaks probably are influenced by groundwater with relative high pH value under which calcite can precipitate with sufficiently high Ca$^{2+}$ concentrations. In contrast, samples with large Ca contents, but without carbonate peaks probably have Ca$^{2+}$ bound to carboxyl groups, which leads to a small carboxyl peak (around 1730 cm$^{-1}$) and a more pronounced peak around 1640 cm$^{-1}$ which has contributions by carboxylates [@Ellerbrock.2021] (supporting Fig. \@ref(si-fig:irp-plot-17)).  
+It is interesting that prediction of other variables (e.g., C, N, K, P, Ti, bulk density) is possible without such bias. Since the majority of samples with large Ca contents (ca. $>15000~\mu\text{g}~\text{g}^{-1}$) are from cores from one permafrost peatland site, this may be due to overfitting, indicating that more peat MIRS from carbonate rich samples need to be published to improve development and testing of transmission-MIR prediction models for carbonate-rich peat.  
+Ti is the only target variable for which the training RMSE is significantly larger than the testing RMSE (Tab. \@ref(tab:irp-table-1)). This indicates that Ti contents were more variable in the training data than in the testing data. Since Ti is unlikely to cause detectable peaks in peat MIRS, prediction of Ti concentrations probably relies mainly on a similar atmospheric deposition across the analyzed peatlands and residual enrichment as peat is lost due to decomposition or fires. That even small Ti concentrations can be estimated from MIRS therefore supports application of Ti concentrations as decomposition indicator, even though the model also suggests that there are other sources of variation. In fact, the most useful application of the models may not be the accurate prediction of Ti contents, but the detection of conditions where Ti concentrations are controlled by other factors than residual enrichment from decomposition. Such conditions can be detected by comparing predictions of the model to Ti measurements.  
+The models for $\delta^{13}$C and $\delta^{15}$N have prediction errors much too large for most current applications of such isotope measurements. C and N isotope values are controlled by many different processes that can easily lead to a large variation in $\delta^{13}$C and $\delta^{15}$N values despite similar spectral properties (for $\delta^{13}$C: differences in $\delta^{13}$C signatures of assimilated CO$_2$ (due to isotope fractionation [@Williams.1996; @Hobbie.2004], the Suess effect [@Keeling.1979], and differences in the fraction of CO$_2$ assimilated from methanotrophy [@Larmola.2010; @Schmidt.2014]. For $\delta^{15}$N: different pathways via which N is assimilated by peat forming vegetation [@Asada.2005a] and the opposite effects of isotope fractionation [@Nadelhoffer.1988; @Lerch.2011; @Asada.2005; @Alewell.2011] and enrichment of OM fractions with negative $\delta^{13}$C values during aerobic decomposition [@Bowling.2008; @Xia.2020], which agrees with weak correlations of $\delta^{15}$N values with peat decompostion indicators [@Broder.2012; @Biester.2014; @Mathijssen.2019; @Serk.2022]). It may therefore be the case that $\delta^{13}$C and $\delta^{15}$N measurements cannot be estimated accurately with MIRS prediction models. However, many of the $\delta^{13}$C and $\delta^{15}$N measurements in the pmird database do not correct for blank effects [@Teickner.2025c], which biases $\delta^{13}$C and $\delta^{15}$N values proportionally to the C and N mass [@Langel.2017]. According to blank corrections for other projects, this bias has a magnitude of ca. 0.2 to 0.5 (depending on the sample C mass) \textperthousand for $\delta^{13}$C and a magnitude of ca. 0.2 to 1 (depending on the sample N mass) \textperthousand for $\delta^{15}$N. This is only a fraction of the estimated RMSE (Tab. \@ref(tab:irp-table-1)) and we therefore currently assume that unbiased measurements would still result in large prediction errors relative to measurements of $\delta^{13}$C and $\delta^{15}$N. For $\delta^{15}$N, the contribution of this bias is certainly larger than for $\delta^{13}$C. A factor that contributes to the large prediction errors therefore are biased measurements due to uncorrected blank effects.  
+An alternative explanation for the large prediction errors may therefore be biased measurements due to uncorrected blank effects.  
+For C/N, prediction errors are larger for samples with larger C/N. Two factors probably contribute to this pattern: Firstly, large C/N values imply small N contents and at large C/N values, very small changes in N contents cause large changes in C/N values. Such slight changes in N contents probably cause only small changes in peak intensities that are not easy to detect in MIRS and hence not easy to predict. Secondly, some of the samples with large C/N values have large silicate contents (Fig. \@ref(si-fig:irp-plot-16-3)). The large differences in spectra between undecomposed *Sphagnum* peat and mineral-rich peat very likely confounds linear relations present in peat without large mineral contents.  
+To summarize, for many variables, accurate predictions are possible with the models developed here, whereby the accuracy needed will of course depend on the specific purpose of the analysis. The models for $\delta^{13}$C and $\delta^{15}$N are probably not accurate enough for any analysis of isotope values, even if blank effects are corrected. Besides silicates and nitrogen, calcium --- either in the form of carbonates or in the form of Ca$^{2+}$ bound to carboxylates --- is an important contributor to spectral variability in peat samples and makes it difficult to predict S, Si, and Ca contents, at least with the modeling approach used here. Since the pmird database contains Ca-rich samples only from few sites, future tests of the models with additional Ca-rich peat samples would be useful.
+
+
+## Prediction domains
+
+A comparison of training and testing prediction domains for our models shows that the testing prediction domains covers only a small fraction of the training prediction domain for H, O, NOSC, $\Delta\text{G}_\text{f}^0$, H/C, O/C, C/N, and LOI (Fig. \@ref(fig:irp-plot-19)), which indicates that models for these target variables cover a small range of peat spectral properties and therefore may make erroneous predictions for peat samples as diverse as for example used to compute the prediction model for N.  
+The difference between testing and training prediction domain can be used to identify samples useful to test the models in the future. Similarly, the difference between the training prediction domain and the domain formed from all spectra identifies samples that would be useful additions to the training data if the target variable would be measured for these samples. For example, for H, O, NOSC, $\Delta\text{G}_\text{f}^0$, H/C, O/C, and C/N there is a lack of mineral-rich samples in both the training and testing data, whereas for LOI there are mineral-rich samples in the training data, but not enough mineral-rich samples were left for model testing (Fig. \@ref(fig:irp-plot-19)). The prediction domains are available from the irpeatmodels package.
+
+(ref:irp-plot-19-caption) Prediction domains of the best model for each target variable. The training and testing prediction domains are created from the maximum and minimum intensity values at each wavenumber of the preprocessed spectra across the training or test data. The shaded region "All spectra" is formed in the same way, but with all data that were used for model development. The "All spectra" regions differ from target variable to target variable depending on whether the best model uses zero, first, or second derivative spectra, and depending on how predictor variables are scaled in each model.  
+
+```{r irp-plot-19, out.width="100%", fig.cap='(ref:irp-plot-19-caption)'}
+knitr::include_graphics(tar_read(irp_plot_19))
+```
+
+
+## Filling gaps in the pmird database
+
+Table \@ref(tab:irp-table-2) summarizes the results of our gap filling. Even though we filled all gaps with MIRS predictions, predictions that are outside the training and testing prediction domain may be unreliable and therefore we consider all observations for which the spectra is neither inside the training nor the testing prediction domain as unfilled gaps for our evaluation here.  
+Since the pmird database contains many bulk density and N measurements, but no measurements for porosity, hydraulic conductivity, specific heat capacity, and thermal conductivity, many missing values could be estimated with the pedotransfer functions and the remaining gaps filled with MIRS-predicted bulk density and N. Similarly, a large fraction of fillable gaps for element contents could be imputed, except for H and O for which training and testing prediction domains cover a smaller fraction of the spectral variability. Much fewer gaps could be filled for O, NOSC and $\Delta\text{G}_\text{f}^0$ than for H because of differences in the preprocessing for these models: the models for H uses underived spectra, whereas the models for O, NOSC and $\Delta\text{G}_\text{f}^0$ use first or second derivative spectra, where high frequency features are more emphasized and therefore many spectra are not within the prediction domains (Tab. \@ref(tab:irp-table-1)). For observations, where spectra are outside the prediction domain only because a few of the variables exceed the prediction domain boundaries by small values are still reliable; the amount of useful predictions is therefore probably underestimated. Compared with existing databases [@Zoltai.2000; @Charman.2013; @Loisel.2014; @Treat.2016; @Gallego-Sala.2018; @Leifeld.2020], this makes the gap-filled pmird database one of the largest available data sources for contents of many elements, hydraulic and thermal properties, and peat chemistry, in particular NOSC, and $\Delta\text{G}_\text{f}^0$. The gap filling predictions are available from Zenodo [@Teickner.2025k].
+
+(ref:irp-table-2-caption) Summary of gap filling the pmird database. For each variable, the table shows the number of measured values (no gap filling needed) ("Measured"), the number of gaps ("Gaps"), the number of gaps that can be filled with the pedotransfer functions (with bulk density or N measurements), with the auxiliary model for $\Delta\text{G}_\text{f}^0$ (with element contents), or with formulas for element ratios and NOSC (with element contents) ("Auxiliary models"), the number of gaps that can be filled with MIRS predictions, where spectra are in the training or in the testing prediction domain ("Training domain" and "Testing domain"; some spectra are in both prediction domains and then are counted twice), the number of gaps that could be filled in total ("Filled"), and the fraction of gaps that could be filled ("Filled (%)"). In total, there were `r attr(irp_table_2, "n_total")` samples with spectra for each target variable.
+
+```{r irp-table-2, tab.cap='(ref:irp-table-2-caption)'}
+irp_table_2 |>
+  dplyr::select(target_variable_pretty, n_measured, n_fillable, n_filled_auxilliary, n_filled_train, n_filled_test, n_filled, f_fillable_filled) |>
+  dplyr::mutate(
+    f_fillable_filled = round(f_fillable_filled * 100, 0),
+  ) |>
+  kableExtra::kable(
+    format = "latex",
+    booktabs = TRUE, 
+    longtable = FALSE,
+    escape = FALSE, 
+    row.names = FALSE,
+    col.names = c("Variable", "Measured", "Gaps", "Auxilliary models", "Training domain", "Testing domain", "Filled", "Filled (\\%)")
+  ) |>
+  kableExtra::kable_styling(latex_options = c("scale_down", "HOLD_position")) |>
+  kableExtra::add_header_above(c(" ", " ", " ", " ", "MIRS predictions" = 2, " ", " ")) #|>
+  #kableExtra::add_header_above(c(" ", " ", " ", "Gap filling" = 5))
+  #kableExtra::column_spec(1, width = "6em")
+```
+
+
+
+## Implementation of the models in the irpeatmodels and irpeat R packages
+
+The models can be used with R by installing the irpeat [@Teickner.2025d] and irpeatmodels [@Teickner.2025g] packages. The irpeatmodels package contains the models itself and irpeat contains functions to interact with the models. This design was chosen to account for faster development cycles for code to interact with the models and code for other functions of the irpeat package and also to account for size limitations for software packages in online repositories. 
+
+
+<!--Here, we show, as an example, how peat C content can be predicted, how estimated prediction errors can be accessed and how one can check whether new spectra are within the (testing) prediction domain:
+
+```{r, eval=TRUE, echo=TRUE, warning=FALSE}
+# load the irpeat package
+library(irpeat)
+
+# predict C content for the sample data from the irpeat package
+d <- 
+  irp_carbon_content_1(
+    irpeat_sample_data[1:10, ], 
+    do_summary = TRUE, 
+    check_prediction_domain = "test"
+  )
+
+# print the predicted values
+d$carbon_content_1
+
+# print the estimated prediction uncertainties
+library(errors)
+errors(d$carbon_content_1)
+
+# show which samples are within the testing prediction domain
+d$carbon_content_1_in_pd
+```
+-->
+
+# Conclusions
+
+Our aim was to develop transmission-MIRS prediction models for peat with the quality standards of state of the art prediction models for mineral soils. We have developed models for element contents (C, N, H, O, P, S, K, Ti), element ratios (C/N, H/C, O/C), isotope values ($\delta^{13}$C, $\delta^{15}$N), physical properties (bulk density, macroporosity, non-macroporosity, hydraulic conductivity, specific heat capacity, dry thermal conductivity), Gibbs free energy of formation ($\Delta\text{G}_\text{f}^0$), and nominal oxidation state of carbon (NOSC) of bog peat with data from the pmird database, one of the largest spectral databases available for peat soils. The models have predictive accuracies comparable to or better than existing models for peat, while covering a more diverse range of peat spectral chemistry. All models are available via the R packages irpeat and irpeatmodels. irpeat automatically propagates prediction errors and flags predictions where spectra are outside the prediction domain of the models.  
+A limitation to be addressed in future studies is that more diverse test data and, for some variables, more training data are required to reduce prediction errors and cover more representative chemical gradients of peat, in particular for O and H contents, NOSC and $\Delta\text{G}_\text{f}^0$, and peat samples with larger silicate, carbonate, and, in general, mineral contents. This would also make it possible to use more flexible modeling approaches which could reduce prediction errors. Moreover, it is recommendable to replace pedotransfer functions for peat hydrological and thermal proeprties by spectral prediction models to reduce prediction errors.  
+Our model evaluation lets us draw the following conclusions: First, transmission-MIRS probably are not suitable to predict peat $\delta^{13}$C and $\delta^{15}$N very precisely and we attribute this mainly to the diversity of processes that control $\delta^{13}$C and $\delta^{15}$N and their contrasting effects. Second, a comparison to existing models for mineral soils suggests that we need more targeted approaches to meaningfully compare the predictive accuracy of models evaluated on databases with contrasting fractions of organic versus mineral soil samples.  
+Finally, we used our models to fill gaps in the pmird database, making it one of the largest databases for many peat properties such as hydraulic properties, Ti, O, H, and P contents, NOSC, and $\Delta\text{G}_\text{f}^0$. This illustrates that the models, represent a first step to provide the data required to quantify diverse peat properties at high spatial resolutions which will in particular be useful to estimate and test process models.
+
+<!--# Acknowledgements {.unnumbered}
+
+This study was funded by the Deutsche Forschungsgemeinschaft (DFG) (grant no. KN 929/23-1 to Klaus-Holger Knorr and grant no. PE 1632/18-1 to Edzer Pebesma).
+
+# Competing interests {.unnumbered}
+
+The authors declare no competing interests.-->
+
+<!--# Data and code availability {.unnumbered}
+
+
+# Author contributions {.unnumbered}
+
+
+
+# References {-}-->
+
+---
+abstract: |
+  Better understanding of peatland dynamics requires more data on more peat properties than provided by existing databases. These data needs may be addressed with resource efficient measurement tools, such as models that predict peat properties from mid-infrared spectra (MIRS). High-quality spectral prediction models are already used for mineral soils, but similar developments for peatland-focused research lag behind.  
+  Here, we present transmission-MIRS prediction models for peat which are openly available, easy to use, have basic quality checks for prediction quality, and propagate prediction errors. The models target element contents (C, N, H, O, P, S, K, Ca, Si, Ti), element ratios (C/N, H/C, O/C), isotope values ($\delta^{13}$C, $\delta^{15}$N), physical properties (bulk density, loss on ignition (LOI), macroporosity, non-macroporosity, volume fraction of solids, hydraulic conductivity, specific heat capacity, dry thermal conductivity), thermodynamic properties (Gibbs free energy of formation ($\Delta\text{G}_\text{f}^0$)), and nominal oxidation state of carbon (NOSC). They are representative for more diverse peat samples than currently existing peat-exclusive models while having a competitive predictive accuracy. Relatively accurate predictions can be made for example for many element contents (C, N, O, S, Si, Ca, $\Delta\text{G}_\text{f}^0$, O/C, H/C, bulk density, and LOI).  
+  Many of these properties are not predicted by existing high-quality prediction models focusing on mineral soils. For some of the target variables, high-quality prediction models focusing on mineral soils exist. These models may be more accurate, but reported predictive accuracies are not directly comparable due to imbalances in the amount of organic vs mineral soil samples in the training data. We suggest that some soil properties are easier to predict for peat, whereas others are easier to predict for mineral soils, emphasizing that we need new approaches to meaningfully compare prediction errors of spectral models computed on datasets with variable amounts of organic soils. Our tests also indicate that replacing $\delta^{13}$C and $\delta^{15}$N measurements by MIRS models probably is not feasible due to large prediction errors. Future studies should address the lack of open training and validation data for some peat properties (O, H, NOSC, $\Delta\text{G}_\text{f}^0$, LOI, H/C, O/C), the lack of mineral-rich peat samples, and improve and standardize model validation and comparison for models trained on data with very different proportions of peat soils. 
+  This study is a step to catch up with high quality standards set by models for mineral soils and it provides novel models for several peat properties. By filling data gaps in the Peatland Mid-Infrared Database, we make a step to provide the data required to better understand peatland dynamics.
+---
+
