@@ -1,5 +1,5 @@
 ---
-title: "Prediction of Peat Properties from Transmission Mid-Infrared Spectra in the Peatland Mid-Infrared Spectra Database"
+title: "Prediction of Peat Properties from Transmission Mid-Infrared Spectra"
 # subtitle: Do you have a subtitle? If so, write it here
 # titlerunning: Short form of title (if too long for head)
 # authorrunning: Short form of author list if too long for running head

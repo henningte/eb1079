@@ -1,13 +1,12 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-## Compendium of R code and data for “Prediction of Peat Properties from Transmission Mid-Infrared Spectra in the Peatland Mid-Infrared Spectra Database”
+## Compendium of R code and data for “Prediction of Peat Properties from Transmission Mid-Infrared Spectra”
 
 This repository contains the data and code for our manuscript:
 
-Teickner, H., & Knorr, K.-H. (2025). Prediction of peat Properties from
-transmission mid-infrared spectra in the Peatland Mid-Infrared Spectra
-Database. (unpublished).
+Teickner, H., & Knorr, K.-H. (2025). “Prediction of peat Properties from
+transmission mid-infrared spectra”. (unpublished).
 
 ### How to cite
 
@@ -15,8 +14,8 @@ Please cite this compendium as:
 
 > Henning Teickner and Klaus-Holger Knorr, (2025). Compendium of R code
 > and data for “Prediction of peat Properties from transmission
-> mid-infrared spectra in the Peatland Mid-Infrared Spectra Database”.
-> Accessed 23 Sep 2025. <https://github.com/henningte/eb1079>
+> mid-infrared spectra”. Accessed 25 Sep 2025.
+> <https://github.com/henningte/eb1079>
 
 ### How to use
 
