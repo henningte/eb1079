@@ -12,6 +12,12 @@ knitr::opts_chunk$set(
 )
 ```
 
+```{r, include=FALSE}
+# to force inclusion of the irpeatmodels package into the renv lock file
+irpeatmodels::model_ks_1_config
+```
+
+
 ## Compendium of R code and data for "Prediction of Peat Properties from Transmission Mid-Infrared Spectra"
 
 This repository contains the data and code for our manuscript:

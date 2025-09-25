@@ -50,6 +50,6 @@ LABEL maintainer = "Henning Teickner <henning.teickner@uni-muenster.de>" \
 # to reproduce the analyses from all projects, run:
 # docker run --rm -v $(pwd):/home/rstudio eb1079:0.0.0.9000 R -e 'setwd("/home/rstudio/eb1079");
 #
-# To reproduce the analysis, you will have to set up the pmird database in an own MariaDB server that is connected to the eb1079 container via the `r-db` network. Instructions are available from https://doi.org/10.5281/zenodo.17092587. The mid-infrared spectra from the pmird database also need to be downloaded from https://doi.org/10.5281/zenodo.17092587 and the folder `pmird_prepared_data` stored in the `data/raw_data/pmird` folder available from the repository where this Dockerfile here is also available from.
+# To reproduce the analysis, you will have to set up the pmird database in an own MariaDB server that is connected to the eb1079 container via the `r-db` network. Instructions are available from https://doi.org/10.5281/zenodo.17092587. The mid-infrared spectra from the pmird database also need to be downloaded from https://doi.org/10.5281/zenodo.17092587 and the folder `pmird_prepared_data` stored in the `data/raw_data/pmird` folder available from the repository where this Dockerfile here is also available from. In addition, you will have to manually download and install the 'irpeatmodels' package from Zenodo (https://doi.org/10.5281/zenodo.17187912).
 # After this setup you can execute 'run.R' in the folders in the targets folder (takes about 20 h and occupies additional 50 Gb disk space).
 

@@ -118,6 +118,16 @@
       "Hash": "e7bdd9ee90e96921ca8a0f1972d66682",
       "Requirements": []
     },
+    "RcppArmadillo": {
+      "Package": "RcppArmadillo",
+      "Version": "0.10.6.0.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "d34bcef6e2df81ab2d44c7fbe8b4d3f0",
+      "Requirements": [
+        "Rcpp"
+      ]
+    },
     "RcppEigen": {
       "Package": "RcppEigen",
       "Version": "0.3.4.0.2",
@@ -175,6 +185,16 @@
         "svUnit"
       ]
     },
+    "askpass": {
+      "Package": "askpass",
+      "Version": "1.1",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "e8a22846fff485f0be3770c2da758713",
+      "Requirements": [
+        "sys"
+      ]
+    },
     "backports": {
       "Package": "backports",
       "Version": "1.5.0",
@@ -219,6 +239,19 @@
         "tidyselect"
       ]
     },
+    "bib2df": {
+      "Package": "bib2df",
+      "Version": "1.1.2.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "f73a15a851cb13310bd6765c0ec97b60",
+      "Requirements": [
+        "dplyr",
+        "httr",
+        "humaniformat",
+        "stringr"
+      ]
+    },
     "bit": {
       "Package": "bit",
       "Version": "4.6.0",
@@ -246,6 +279,22 @@
       "Requirements": [
         "rlang",
         "vctrs"
+      ]
+    },
+    "bookdown": {
+      "Package": "bookdown",
+      "Version": "0.43",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "e947197b6372a88f7dc8a0fa2f2fd2b4",
+      "Requirements": [
+        "htmltools",
+        "jquerylib",
+        "knitr",
+        "rmarkdown",
+        "tinytex",
+        "xfun",
+        "yaml"
       ]
     },
     "bridgesampling": {
@@ -340,17 +389,6 @@
       "Requirements": [
         "R6",
         "processx"
-      ]
-    },
-    "cellranger": {
-      "Package": "cellranger",
-      "Version": "1.1.0",
-      "Source": "Repository",
-      "Repository": "RSPM",
-      "Hash": "f61dbaec772ccd2e17705c1e872e9e7c",
-      "Requirements": [
-        "rematch",
-        "tibble"
       ]
     },
     "checkmate": {
@@ -714,6 +752,17 @@
         "rlang"
       ]
     },
+    "foreach": {
+      "Package": "foreach",
+      "Version": "1.5.2",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "618609b42c9406731ead03adf5379850",
+      "Requirements": [
+        "codetools",
+        "iterators"
+      ]
+    },
     "fs": {
       "Package": "fs",
       "Version": "1.5.0",
@@ -934,6 +983,30 @@
         "rlang"
       ]
     },
+    "httr": {
+      "Package": "httr",
+      "Version": "1.4.2",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "a525aba14184fec243f9eaec62fbed43",
+      "Requirements": [
+        "R6",
+        "curl",
+        "jsonlite",
+        "mime",
+        "openssl"
+      ]
+    },
+    "humaniformat": {
+      "Package": "humaniformat",
+      "Version": "0.6.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "d521cf9db39ca79250a00029661fb7cd",
+      "Requirements": [
+        "Rcpp"
+      ]
+    },
     "hySpc.testthat": {
       "Package": "hySpc.testthat",
       "Version": "0.2.1.9000",
@@ -1000,15 +1073,15 @@
     },
     "ir": {
       "Package": "ir",
-      "Version": "0.3.0.9000",
+      "Version": "0.4.1",
       "Source": "GitHub",
       "RemoteType": "github",
       "RemoteHost": "api.github.com",
       "RemoteRepo": "ir",
       "RemoteUsername": "henningte",
-      "RemoteRef": "dev",
-      "RemoteSha": "ed2cfe199b17ce21eb1bf6d5d3cc892e9910175c",
-      "Hash": "08dfed871f571508b9828ec7cf400045",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "743b33da0f3bf6d97243b7e5e9d41dcd468f1482",
+      "Hash": "3d56ffb8b48129a781c1c4f89cf72bf2",
       "Requirements": [
         "Rdpack",
         "dplyr",
@@ -1026,10 +1099,16 @@
     },
     "irpeat": {
       "Package": "irpeat",
-      "Version": "0.1.0.9000",
-      "Source": "unknown",
+      "Version": "0.3.0",
+      "Source": "GitHub",
       "Remotes": "henningte/ir, henningte/elco",
-      "Hash": "f14636821a256d7bdfe24ba19c7f29b8",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "irpeat",
+      "RemoteUsername": "henningte",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "44e8164cb5047339e7578bae8d132c968d6e728f",
+      "Hash": "5d797a5264f07222959411739752d585",
       "Requirements": [
         "Rdpack",
         "dplyr",
@@ -1043,12 +1122,30 @@
         "rlang"
       ]
     },
+    "irpeatmodels": {
+      "Package": "irpeatmodels",
+      "Version": "0.1.0",
+      "Source": "unknown",
+      "Hash": "986bb10e1d6f5ffbd47a539baf935d5f",
+      "Requirements": [
+        "Rdpack",
+        "lifecycle"
+      ]
+    },
     "isoband": {
       "Package": "isoband",
       "Version": "0.2.7",
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "0080607b4a1a7b28979aecef976d8bc2",
+      "Requirements": []
+    },
+    "iterators": {
+      "Package": "iterators",
+      "Version": "1.0.14",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "8954069286b4b2b0d023d1b288dce978",
       "Requirements": []
     },
     "jpeg": {
@@ -1076,6 +1173,26 @@
       "Repository": "RSPM",
       "Hash": "98138e0994d41508c7a6b84a0600cfcb",
       "Requirements": []
+    },
+    "kableExtra": {
+      "Package": "kableExtra",
+      "Version": "1.4.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "532d16304274c23c8563f94b79351c86",
+      "Requirements": [
+        "digest",
+        "htmltools",
+        "knitr",
+        "magrittr",
+        "rmarkdown",
+        "rstudioapi",
+        "scales",
+        "stringr",
+        "svglite",
+        "viridisLite",
+        "xml2"
+      ]
     },
     "knitr": {
       "Package": "knitr",
@@ -1213,6 +1330,14 @@
         "xfun"
       ]
     },
+    "mathjaxr": {
+      "Package": "mathjaxr",
+      "Version": "1.8-0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "699322a556bb01554046ccb995ca0201",
+      "Requirements": []
+    },
     "matrixStats": {
       "Package": "matrixStats",
       "Version": "1.5.0",
@@ -1348,6 +1473,16 @@
         "maxLik"
       ]
     },
+    "openssl": {
+      "Package": "openssl",
+      "Version": "1.4.4",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "f4dbc5a47fd93d3415249884d31d6791",
+      "Requirements": [
+        "askpass"
+      ]
+    },
     "parallelly": {
       "Package": "parallelly",
       "Version": "1.43.0",
@@ -1355,6 +1490,20 @@
       "Repository": "CRAN",
       "Hash": "ca40f736e4d2dc6981c1dc9d14ea3dcf",
       "Requirements": []
+    },
+    "patchwork": {
+      "Package": "patchwork",
+      "Version": "1.3.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "e23fb9ecb1258207bcb763d78d513439",
+      "Requirements": [
+        "cli",
+        "farver",
+        "ggplot2",
+        "gtable",
+        "rlang"
+      ]
     },
     "pillar": {
       "Package": "pillar",
@@ -1537,6 +1686,21 @@
         "rlang"
       ]
     },
+    "prospectr": {
+      "Package": "prospectr",
+      "Version": "0.2.8",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "65856ac194ad9f8ccdb61ca3590d264f",
+      "Requirements": [
+        "Rcpp",
+        "RcppArmadillo",
+        "foreach",
+        "iterators",
+        "lifecycle",
+        "mathjaxr"
+      ]
+    },
     "proxy": {
       "Package": "proxy",
       "Version": "0.4-27",
@@ -1630,27 +1794,6 @@
         "tzdb",
         "vroom"
       ]
-    },
-    "readxl": {
-      "Package": "readxl",
-      "Version": "1.3.1",
-      "Source": "Repository",
-      "Repository": "RSPM",
-      "Hash": "63537c483c2dbec8d9e3183b3735254a",
-      "Requirements": [
-        "Rcpp",
-        "cellranger",
-        "progress",
-        "tibble"
-      ]
-    },
-    "rematch": {
-      "Package": "rematch",
-      "Version": "1.0.1",
-      "Source": "Repository",
-      "Repository": "RSPM",
-      "Hash": "c66b930d20bb6d858cd18e1cebcfae5c",
-      "Requirements": []
     },
     "rematch2": {
       "Package": "rematch2",
@@ -1756,6 +1899,26 @@
       "Repository": "RSPM",
       "Hash": "06c85365a03fdaf699966cc1d3cf53ea",
       "Requirements": []
+    },
+    "rticles": {
+      "Package": "rticles",
+      "Version": "0.27.10",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "rticles",
+      "RemoteUsername": "rstudio",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "91690a1544f128f758a1ee62b638b2d46981bb52",
+      "Hash": "69c864654908dc56b5fc90259c6f9e79",
+      "Requirements": [
+        "knitr",
+        "lifecycle",
+        "rmarkdown",
+        "tinytex",
+        "xfun",
+        "yaml"
+      ]
     },
     "s2": {
       "Package": "s2",
@@ -1866,6 +2029,43 @@
       "Hash": "894d0aff9585344af4ab78e2b4d60ab7",
       "Requirements": []
     },
+    "svglite": {
+      "Package": "svglite",
+      "Version": "2.2.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "a8a754856a1b29a24cbe269b8e03989a",
+      "Requirements": [
+        "base64enc",
+        "cli",
+        "cpp11",
+        "lifecycle",
+        "rlang",
+        "systemfonts",
+        "textshaping"
+      ]
+    },
+    "sys": {
+      "Package": "sys",
+      "Version": "3.4",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "b227d13e29222b4574486cfcbde077fa",
+      "Requirements": []
+    },
+    "systemfonts": {
+      "Package": "systemfonts",
+      "Version": "1.2.3",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "fe31683d2c6fd9a5724bcdf8ed44ded9",
+      "Requirements": [
+        "base64enc",
+        "cpp11",
+        "jsonlite",
+        "lifecycle"
+      ]
+    },
     "tabulapdf": {
       "Package": "tabulapdf",
       "Version": "1.0.5-5",
@@ -1954,6 +2154,19 @@
         "rlang",
         "waldo",
         "withr"
+      ]
+    },
+    "textshaping": {
+      "Package": "textshaping",
+      "Version": "1.0.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "75b5813527f4154cb467e4cf60911333",
+      "Requirements": [
+        "cpp11",
+        "lifecycle",
+        "stringi",
+        "systemfonts"
       ]
     },
     "tibble": {
