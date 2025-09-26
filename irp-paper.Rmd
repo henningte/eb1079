@@ -41,7 +41,7 @@ availability:
   #data: |
   #  use this to add a statement when having only data sets available
   codedata: |
-    Data and code to reproduce this manuscript are available from [---todo:ref]. The data used in this study are from the pmird database [@Teickner.2025c], @Wang.2015b, @Liu.2019, @OConnor.2020, and @Gnatowski.2022. The models computed in this study are available in the irpeatmodels package [@Teickner.2025g] and can be used with the irpeat package [@Teickner.2025l]. The gap-filled subsets of the pmird database are available from [@Teickner.2025k].
+    Data and code to reproduce this manuscript are available from [@Teickner.2025m]. The data used in this study are from the pmird database [@Teickner.2025c], @Wang.2015b, @Liu.2019, @OConnor.2020, and @Gnatowski.2022. The models computed in this study are available in the irpeatmodels package [@Teickner.2025g] and can be used with the irpeat package [@Teickner.2025l]. The gap-filled subsets of the pmird database are available from [@Teickner.2025k].
 #  sample: |
 #    use this section when having geoscientific samples available
 # videosupplement: |

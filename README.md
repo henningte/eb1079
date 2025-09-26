@@ -14,7 +14,7 @@ Please cite this compendium as:
 
 > Henning Teickner and Klaus-Holger Knorr, (2025). Compendium of R code
 > and data for “Prediction of peat Properties from transmission
-> mid-infrared spectra”. Accessed 25 Sep 2025.
+> mid-infrared spectra”. Accessed 26 Sep 2025.
 > <https://github.com/henningte/eb1079>
 
 ### How to use
@@ -31,7 +31,7 @@ information.
 **Text and figures :**
 [CC-BY-4.0](http://creativecommons.org/licenses/by/4.0/)
 
-**Code :** See the [DESCRIPTION](DESCRIPTION) file
+**Code :** [GPL-3](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 **Data :** [CC-0](http://creativecommons.org/publicdomain/zero/1.0/)
 attribution requested in reuse. See the sources section for licenses for
