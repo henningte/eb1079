@@ -5,7 +5,7 @@
 
 This repository contains the data and code for our manuscript:
 
-Teickner, H., & Knorr, K.-H. (2025). “Prediction of peat Properties from
+Teickner, H. & Knorr, K.-H. (2025). “Prediction of peat Properties from
 transmission mid-infrared spectra”. (unpublished).
 
 ### How to cite

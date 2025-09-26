@@ -22,7 +22,7 @@ irpeatmodels::model_ks_1_config
 
 This repository contains the data and code for our manuscript:
 
-Teickner, H., & Knorr, K.-H. (2025). "Prediction of peat Properties from transmission mid-infrared spectra". (unpublished).
+Teickner, H. & Knorr, K.-H. (2025). "Prediction of peat Properties from transmission mid-infrared spectra". (unpublished).
 
 ### How to cite
 
@@ -36,7 +36,7 @@ Instructions how to set up the Docker containers to reproduce the computations a
 
 ### Licenses
 
-**Text and figures :**  [CC-BY-4.0](http://creativecommons.org/licenses/by/4.0/)
+**Text and figures :** [CC-BY-4.0](http://creativecommons.org/licenses/by/4.0/)
 
 **Code :** [GPL-3](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
