@@ -269,12 +269,12 @@ irp_get_units_target_variables <- function(x, what) {
           target_variable == "d13C" ~ "&permil;",
           target_variable == "d15N" ~ "&permil;",
           target_variable == "nosc" ~ "-",
-          target_variable == "dgf0" ~ "kJ mol<sup>-1</sup><sub>C</sub>",
+          target_variable == "dgf0" ~ "kJ mol<sub>C</sub><sup>-1</sup>",
           target_variable == "loss_on_ignition" ~ "g g<sup>-1</sup><sub>sample</sub>",
           target_variable == "bulk_density" ~ "g cm<sup>-3</sup>",
-          target_variable == "C_to_N" ~ "g g<sup>-1",
-          target_variable == "O_to_C" ~ "g g<sup>-1",
-          target_variable == "H_to_C" ~ "g g<sup>-1" 
+          target_variable == "C_to_N" ~ "g g<sup>-1</sup>",
+          target_variable == "O_to_C" ~ "g g<sup>-1</sup>",
+          target_variable == "H_to_C" ~ "g g<sup>-1</sup>" 
         )
     )
   

@@ -1079,13 +1079,12 @@ irp_make_plot_14 <- function(irp_fit_1_map_evaluation_1, irp_d_model_info_enrich
   if(as.character(variable_color) == "is_training_data") {
     res_plot <- 
       res_plot + 
+      # ggnewscale::new_scale_fill() +
       scale_fill_manual(values = c("white", "black")) +
       guides(
         fill = guide_legend(title = variable_color_legend_title, override.aes = list(shape = 21, size = 3))
       )
-  }
-  
-  if(is.character(res[[as.character(variable_color)]])) {
+  } else if(is.character(res[[as.character(variable_color)]])) {
     res_plot <- 
       res_plot +
       guides(

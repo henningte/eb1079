@@ -3,6 +3,7 @@
 .RData
 .Ruserdata
 *.pdf
+peer_review
 private/
 gap_filled_publication/
 _targets/objects/

@@ -618,7 +618,7 @@ list(
         irp_d_model_info_enriched_1 = irp_d_model_info_enriched_1, 
         irp_fit_1_map_elpd_compare = irp_fit_1_map_elpd_compare,
         irp_pmird_mirs = irp_pmird_mirs, 
-        variable_color = sym("is_training_data"), 
+        variable_color = rlang::sym("is_training_data"), 
         variable_color_legend_title = "",
         highlight_outliers = TRUE,
         file_plot = "figures/irp_plot_14_1.pdf"
