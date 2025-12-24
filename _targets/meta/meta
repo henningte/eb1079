@@ -739,9 +739,6 @@ irp_fit_1_map_slopes|stem|940a19e6ea2cfe3f|47216f3d3256d7b0|af6727e4c3d34d5b|-20
 irp_table_3|stem|3b5b3fb8c815828f|d2c6f0d300d3af00|87d5a3db5b8ed35b|161784455||t20269.4936384461s|s853b|853|rds|local|vector|||25.161||
 irp_plot_20|stem|200aa18f345cd268|95da5c8520723321|a4ca0aef0e456fea|-949314072|figures/irp_plot_20.pdf|t20271.5456295687s|s260173b|260173|file|local|vector|||126.4||
 irp_table_1|stem|f80492739ee21127|1b9e4e810acecc15|8ef8ae416283966c|1799852144||t20271.7486514674s|s2076b|2076|rds|local|vector|||12.309||
-irp_plot_19|stem|9d94a9e5283bcc0f|e19bef7ae39e33b2|90e3010223f72191|-1570268553|figures/irp_plot_19.pdf|t20271.7505089686s|s203949b|203949|file|local|vector|||7.71||
-irp_plot_14_3|stem|40cb03c8aa74860f|c20d4fa1839bb801|94d81c6612d1c866|-540885795|figures/irp_plot_14_3.pdf|t20271.7509502398s|s597733b|597733|file|local|vector|||9.67||
-irp_plot_14_4|stem|10a39ee1881c5197|0fd0d86da8d068c2|94d81c6612d1c866|-234754350|figures/irp_plot_14_4.pdf|t20271.751149508s|s563867b|563867|file|local|vector|||8.001||
 irp_m6|stem|808688ce8cbe9d1e|db867e0fe7fe7d0e|6a1303acdfbf2723|2020597622||t20274.8154210926s|s1130542b|1130542|rds|local|vector|||24.055||
 irp_plot_12|stem|d15b96eba5a36ce7|55e22511d8a7c469|17f88bcc531bac9f|-1505704128|figures/irp_plot_12.pdf|t20274.815620146s|s19138b|19138|file|local|vector|||11.922||
 irp_plot_13|stem|ebf985ee1d7de703|4755bc5808f7fc04|7797fb73ea000377|1782294795|figures/irp_plot_13.pdf|t20274.8158107782s|s28869b|28869|file|local|vector|||10.723||
@@ -871,9 +868,13 @@ irp_plot_16_3|stem|7df7ae7a0a1b104a|9ceed936cfb3e16a|e72b34539583fe41|700165954|
 irp_plot_18|stem|1596ca2e594bc9fa|e525453101c7963f|4245a996a97eed27|-748814934||t20436.3099376692s|s430b|430|rds|local|vector|||5.705|Function hyperSpecspc.rubberband is deprecated. Use function spc_rubberband instead.|
 irp_plot_15|stem|274aa0c6309c7663|3448d4981fecb603|ac992fbe31fafd26|287326614|figures/irp_plot_15.pdf|t20436.3101935925s|s17636b|17636|file|local|vector|||6.073|Removed 18 rows containing missing values or values outside the scale rangegeom_point.. Removed 24 rows containing missing values or values outside the scale rangegeom_point.|
 irp_plot_14_1|stem|aa8ecddd3f2f89a0|2b2a51c86f00858e|dc8f4c6f41f7e950|1448023029|figures/irp_plot_14_1.pdf|t20436.3207196389s|s538662b|538662|file|local|vector|||9.453||
-irp_references_file|stem|03df9c1036450f92|51b1aa38a07a9df1|2c530c1562a7fbd1|902414049|references.bib|t20441.7211976185s|s155828b|155828|file|local|vector|||9.94||
-irp_supporting_info|stem|f9425e53267bfa9b|b2f666eb12278f71|f4e3dd2f24067cd7|306073708|irp-supporting-info.pdf*irp-supporting-info.Rmd|t20441.7230531757s|s2830428b|2830428|file|local|vector|||9.667||
-irp_paper|stem|1c7c499f98a9bca4|e557894df2740b39|6f50f8cbc8723aff|356880594|irp-paper.pdf*irp-paper.Rmd|t20384.6250753347s||1109557|file|local|vector|||30.96||LaTeX failed to compile irppaper.tex. See httpsyihui.orgtinytexrdebugging for debugging tips. See irppaper.log for more info.
+irp_plot_14_2|stem|312c452c54801089|247d0acdba1d8a83|dc8f4c6f41f7e950|1696226564|figures/irp_plot_14_2.pdf|t20441.7434865653s|s570498b|570498|file|local|vector|||12.418||
+irp_plot_14_3|stem|9b9ca798bbc859ac|c20d4fa1839bb801|dc8f4c6f41f7e950|-540885795|figures/irp_plot_14_3.pdf|t20442.4107260612s|s597756b|597756|file|local|vector|||41.547||
+irp_plot_14_4|stem|9318df00984e8376|0fd0d86da8d068c2|dc8f4c6f41f7e950|-234754350|figures/irp_plot_14_4.pdf|t20442.4114651303s|s563886b|563886|file|local|vector|||32.553||
+irp_plot_19|stem|3abc4e14f90d39ff|3654802f10fd7922|b01fc79b5bed6133|-1570268553|figures/irp_plot_19.pdf|t20442.4190354151s|s203949b|203949|file|local|vector|||9.914||
+irp_plot_19_2|stem|4ea85c34522b0a4d|48c200f443cfe980|1baf7dbf5a99a489|-485578545|figures/irp_plot_19_2.pdf|t20442.42060499s|s203893b|203893|file|local|vector|||96.935||
+irp_references_file|stem|25ed7b5f16e79a39|51b1aa38a07a9df1|2c530c1562a7fbd1|902414049|references.bib|t20446.2715765932s|s156615b|156615|file|local|vector|||36.338||
+irp_supporting_info|stem|40750ee293d400e4|b2f666eb12278f71|c661000c98fef7cf|306073708|irp-supporting-info.pdf*irp-supporting-info.Rmd|t20446.2777852485s|s2830426b|2830426|file|local|vector|||46.052||
 irp_predict_for_eb1079_helper_1|function|5d35b93c3b30b897
 irp_preprocess_eb1079|function|bc4955c78306f312
 irp_get_dimension_reduction_model_settings_1|function|d0aa17605f561f1c
@@ -937,7 +938,7 @@ irp_add_dimension_reduction_ncomps_to_d_model_info|function|049229ff5dee5177
 irp_fit_1_map|object|15c547f4a7086b1c
 irp_add_y_scale_to_d_model_info|function|5dfac02d2b6fd59e
 irp_delta_to_atom_fraction|function|e0d0e20d43c98c69
-.Random.seed|object|2e149bcd6a4a1394
+.Random.seed|object|f6c6b17528b862f6
 crew_sequential|object|08f0167a2374b1eb
 irp_make_brms_compiled_model|function|1c32045d8a6068ed
 irp_add_data_partition_to_d_model_info|function|9341c1afe23b5e09
@@ -988,7 +989,7 @@ irp_make_plot_14|function|eff144c9692c65fd
 irp_make_plot_15|function|b1a4edb197a35c3d
 irp_make_plot_16|function|c1e5e548b19f06fc
 irp_make_plot_18|function|f3a1cd3e981c9176
-irp_make_plot_19|function|22dcf9b2f8af2685
+irp_make_plot_19|function|051f4cc2f5d3554e
 irp_make_table_1|function|d9f0093a5f52f52d
 irp_make_table_3|function|33756c7cad2473c2
 irp_make_plot_20|function|abc78505634a992f
@@ -1011,4 +1012,4 @@ irp_estimate_dgf0_per_C|function|e60a6d465bdaf6c3
 irp_add_y_to_d_model_info|function|3c69c10246cf1178
 irp_make_plot_5|function|351db3183b171719
 irp_make_pmird_gap_filled|function|224ec7b3a15838ed
-irp_plot_14_2|stem|312c452c54801089|247d0acdba1d8a83|dc8f4c6f41f7e950|1696226564|figures/irp_plot_14_2.pdf|t20441.7434865653s|s570498b|570498|file|local|vector|||12.418||
+irp_paper|stem|d661a5368b445533|7fa91ecda2c0b87e|db4a6f85e1d891b7|356880594|irp-paper.pdf*irp-paper.Rmd|t20446.2810953038s|s1111109b|1111109|file|local|vector|||85.197|Package xcolor Warning Incompatible color definition on input line 154.. Package xcolor Warning Incompatible color definition on input line 156.|

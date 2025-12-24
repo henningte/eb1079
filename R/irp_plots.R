@@ -1674,7 +1674,7 @@ irp_make_plot_18 <- function(irp_fit_1_map_evaluation_1, irp_d_model_info_enrich
 #' Plots training and testing prediction domains
 #' 
 #' @export
-irp_make_plot_19 <- function(irp_fit_1_map_evaluation_1, irp_d_model_info_enriched_1, irp_fit_1_map_elpd_compare, irp_fit_1_map_pd, irp_id_model_best, file_plot = "figures/irp_plot_19.pdf") {
+irp_make_plot_19 <- function(irp_fit_1_map_evaluation_1, irp_d_model_info_enriched_1, irp_fit_1_map_elpd_compare, irp_fit_1_map_pd, irp_id_model_best, scale_prediction_domains_uniformly = FALSE, irp_data_model_preprocessed, file_plot = "figures/irp_plot_19.pdf") {
   
   id_model_best <- irp_id_model_best
   
@@ -1683,22 +1683,55 @@ irp_make_plot_19 <- function(irp_fit_1_map_evaluation_1, irp_d_model_info_enrich
     dplyr::select(id_model, target_variable) |>
     dplyr::mutate(
       prediction_domain =
-        purrr::map(irp_fit_1_map_pd, function(.x) {
-          dplyr::bind_rows(
-            .x$train |>
-              dplyr::mutate(
-                prediction_domain_type = "Training prediction domain"
-              ),
-            .x$test |>
-              dplyr::mutate(
-                prediction_domain_type = "Testing prediction domain"
-              ),
-            .x$all |>
-              dplyr::mutate(
-                prediction_domain_type = "All spectra"
+        if(scale_prediction_domains_uniformly) {
+          purrr::map(seq_along(target_variable), function(i) {
+            res <- 
+              irp_data_model_preprocessed[[1]] |>
+              ir::ir_scale(
+                center = irp_d_model_info_enriched_1$x_center[[1]],
+                scale = irp_d_model_info_enriched_1$x_scale[[1]]
               )
-          )
-        })
+            
+            dplyr::bind_rows(
+              res |>
+                dplyr::filter(id_measurement %in% (irp_d_model_info_enriched_1$data_partition[[i]] |> dplyr::filter(for_prospectr_model) |> dplyr::pull(id_measurement))) |>
+                irpeat::irp_as_irp_prediction_domain() |>
+                dplyr::mutate(
+                  prediction_domain_type = "Training prediction domain"
+                ),
+              res |>
+                dplyr::filter(id_measurement %in% (irp_d_model_info_enriched_1$data_partition[[i]] |> dplyr::filter(for_prospectr_test) |> dplyr::pull(id_measurement))) |>
+                irpeat::irp_as_irp_prediction_domain() |>
+                dplyr::mutate(
+                  prediction_domain_type = "Testing prediction domain"
+                ),
+              res |>
+                dplyr::filter( (mir_mode != "atr_ftir" | is.na(mir_mode)) & (! is_baseline_corrected | stringr::str_detect(core_label, "^peatbog")) & sample_type != "dom") |>
+                dplyr::filter(id_dataset != 16) |> #---note: seem to be ATR spectra
+                irpeat::irp_as_irp_prediction_domain() |>
+                dplyr::mutate(
+                  prediction_domain_type = "All spectra"
+                )
+            )
+          })
+        } else {
+          purrr::map(irp_fit_1_map_pd, function(.x) {
+            dplyr::bind_rows(
+              .x$train |>
+                dplyr::mutate(
+                  prediction_domain_type = "Training prediction domain"
+                ),
+              .x$test |>
+                dplyr::mutate(
+                  prediction_domain_type = "Testing prediction domain"
+                ),
+              .x$all |>
+                dplyr::mutate(
+                  prediction_domain_type = "All spectra"
+                )
+            )
+          })
+        }
     ) |>
     dplyr::filter(id_model %in% id_model_best) |>
     tidyr::unnest(prediction_domain)

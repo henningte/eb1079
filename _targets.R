@@ -764,7 +764,24 @@ list(
         irp_fit_1_map_elpd_compare = irp_fit_1_map_elpd_compare, 
         irp_fit_1_map_pd = irp_fit_1_map_pd, 
         irp_id_model_best = irp_id_model_best,
+        scale_prediction_domains_uniformly = FALSE, 
+        irp_data_model_preprocessed = NULL,
         file_plot = "figures/irp_plot_19.pdf"
+      ),
+    format = "file"
+  ),
+  tar_target(
+    irp_plot_19_2,
+    command =
+      irp_make_plot_19(
+        irp_fit_1_map_evaluation_1 = irp_fit_1_map_evaluation_1, 
+        irp_d_model_info_enriched_1 = irp_d_model_info_enriched_1, 
+        irp_fit_1_map_elpd_compare = irp_fit_1_map_elpd_compare, 
+        irp_fit_1_map_pd = irp_fit_1_map_pd, 
+        irp_id_model_best = irp_id_model_best,
+        scale_prediction_domains_uniformly = TRUE, 
+        irp_data_model_preprocessed = irp_data_model_preprocessed,
+        file_plot = "figures/irp_plot_19_2.pdf"
       ),
     format = "file"
   ),

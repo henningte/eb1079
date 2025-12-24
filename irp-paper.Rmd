@@ -122,7 +122,7 @@ To summarize, spectral prediction models for mineral soils currently have higher
 
 2. Provide prediction domains for all these models as reliability check for predictions.
 
-3. Propagate errors from data (where available) and parameters to predictions.
+3. Propagate errors from data (only for $\Delta\text{G}_\text{f}^0$) and parameters (all target variables) to predictions.
 
 4. Fill data gaps in the pmird database, one of the largest open databases focusing on peat and mid-infrared spectra [@Teickner.2025c], to support peatland research.
 
@@ -426,10 +426,10 @@ To summarize, for many variables, accurate predictions are possible with the mod
 A comparison of training and testing prediction domains for our models shows that the testing prediction domains covers only a small fraction of the training prediction domain for H, O, NOSC, $\Delta\text{G}_\text{f}^0$, H/C, O/C, C/N, and LOI (Fig. \@ref(fig:irp-plot-19)). For these peat properties, only few samples were left for model testing and we could therefore not test the predictive accuracy of the models for some parts of the training prediction domain. Future studies should test these blind spots.  
 The difference between testing and training prediction domain can be used to identify samples useful to test the models in the future. Similarly, the difference between the training prediction domain and the domain formed from all spectra identifies samples that would be useful additions to the training data if the target variable would be measured for these samples. For example, for H, O, NOSC, $\Delta\text{G}_\text{f}^0$, H/C, O/C, and C/N there is a lack of mineral-rich samples in both the training and testing data, whereas for LOI there are mineral-rich samples in the training data, but not enough mineral-rich samples were left for model testing (Fig. \@ref(fig:irp-plot-19)). The prediction domains are available from the irpeatmodels package.
 
-(ref:irp-plot-19-caption) Prediction domains of the best model for each target variable. The training and testing prediction domains are created from the maximum and minimum intensity values at each wavenumber of the preprocessed spectra across the training or test data. The shaded region "All spectra" is formed in the same way, but with all data that were used for model development. The "All spectra" regions differ from target variable to target variable depending on whether the best model uses zero, first, or second derivative spectra, and depending on how predictor variables are scaled in each model.  
+(ref:irp-plot-19-caption) Prediction domains of the best model for each target variable. The training and testing prediction domains are created from the maximum and minimum intensity values at each wavenumber of the preprocessed spectra across the training or test data. The shaded region "All spectra" is formed in the same way, but with all data that were used for model development. For this plot, to allow easier comparison of prediction domains between target variables, the spectra were all preprocessed and scaled in the same way (zero derivative spectra, scaling of intensities as for C).<!--The "All spectra" regions differ from target variable to target variable depending on whether the best model uses zero, first, or second derivative spectra, and depending on how predictor variables are scaled in each model.-->  
 
 ```{r irp-plot-19, out.width="100%", fig.cap='(ref:irp-plot-19-caption)'}
-knitr::include_graphics(tar_read(irp_plot_19))
+knitr::include_graphics(tar_read(irp_plot_19_2))
 ```
 
 
