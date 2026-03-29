@@ -33,7 +33,7 @@ crew_parallel_2 <-
 
 # Set target options:
 tar_option_set(
-  packages = c("tibble", "CHNOSZ", "elco", "ggplot2", "dm", "ir", "cmdstanr", "brms", "posterior", "pls", "dimreduce", "sf"),
+  packages = c("tibble", "CHNOSZ", "elco", "ggplot2", "dm", "ir", "cmdstanr", "brms", "posterior", "pls", "dimreduce", "sf", "rnaturalearth"),
   format = "rds",
   controller = crew_controller_group(crew_sequential, crew_parallel_1, crew_parallel_2)
 )
@@ -812,6 +812,16 @@ list(
       ),
     format = "file"
   ),
+  tar_target(
+    irp_plot_23,
+    command =
+      irp_make_plot_23(
+        irp_d_model_info_enriched_1 = irp_d_model_info_enriched_1, 
+        irp_pmird_mirs = irp_pmird_mirs,
+        irp_table_4 = irp_table_4
+      ),
+    format = "file"
+  ),
   #### tables ####
   tar_target(
     irp_table_1,
@@ -836,6 +846,14 @@ list(
     command = 
       irp_make_table_3(
         irp_fit_1_map_slopes = irp_fit_1_map_slopes
+      )
+  ),
+  tar_target(
+    irp_table_4,
+    command = 
+      irp_make_table_4(
+        irp_d_model_info_enriched_1 = irp_d_model_info_enriched_1, 
+        irp_pmird_mirs = irp_pmird_mirs
       )
   ),
   #### report ####

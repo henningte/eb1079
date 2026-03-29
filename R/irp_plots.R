@@ -2046,6 +2046,61 @@ irp_make_plot_22 <- function(irp_data_wittington2024, file_plot = "figures/irp_p
 }
 
 
+#' Maps for sampling locations for each model
+#' 
+#' @export
+irp_make_plot_23 <- function(irp_d_model_info_enriched_1, irp_pmird_mirs, irp_table_4) {
+  
+  # world map
+  world <- 
+    rnaturalearth::ne_countries(scale = "small", returnclass = "sf") |>
+    dplyr::filter(sovereignt != "Antarctica")
+  
+  purrr::map_chr(seq_len(nrow(irp_d_model_info_enriched_1)), function(i) {
+    
+    file_plot <- paste0("figures/irp_plot_23_", i, ".pdf")
+    
+    res <- 
+      irp_pmird_mirs |>
+      dplyr::filter(id_measurement %in% irp_d_model_info_enriched_1$id_measurement_all[[i]]) |>
+      dplyr::filter(! is.na(sampling_longitude)) |>
+      dplyr::select(id_dataset, core_label, sampling_longitude, sampling_latitude) |>
+      dplyr::distinct() |>
+      dplyr::mutate(
+        core_only_used_for_testing =
+          paste0(id_dataset, "_", core_label) %in% irp_table_4$core_label_test_only[[i]]
+      ) |>
+      sf::st_as_sf(coords = c("sampling_longitude", "sampling_latitude"), crs = "wgs84")
+    
+    res_plot <- 
+      ggplot(data = world) +
+      geom_sf(data = world, colour = NA, fill = "lightgrey") +
+      geom_sf(data = res, aes(fill = core_only_used_for_testing), shape = 21, stroke = 0.002) +
+      scale_fill_manual(values = c("black", "white")) +
+      coord_sf(ylim = c(-60, NA), expand = FALSE) +
+      theme_minimal() +
+      theme_void() +
+      theme(
+        axis.line = element_blank(),
+        axis.text = element_blank(),
+        legend.position = "none"
+      )
+    
+    ggsave(
+      file_plot,
+      plot = res_plot,
+      width = 5.5, height = 2.7, 
+      dpi = 300,
+      device = cairo_pdf
+    )
+    
+    file_plot
+    
+  })
+  
+}
+
+
 #### Tables ####
 
 #' Model evaluation table for the manuscript
@@ -2303,6 +2358,86 @@ irp_make_table_3 <- function(irp_fit_1_map_slopes) {
 }
 
 
+#' Information on data properties of pmird subsets
+#' 
+#' @export
+irp_make_table_4 <- function(irp_d_model_info_enriched_1, irp_pmird_mirs) {
+  
+  irp_d_model_info_enriched_1 |>
+    dplyr::mutate(
+      metadata =
+        purrr::map(seq_along(id_model), function(i) {
+          index <- data_partition[[i]]$id_measurement[data_partition[[i]]$for_prospectr_model]
+          res1 <- 
+            irp_pmird_mirs |>
+            dplyr::filter(id_measurement %in% id_measurement_all[[i]]) |>
+            dplyr::mutate(
+              spectral_resolution =
+                purrr::map(spectra, function(.x) {
+                  mean(.x$x[-1] - .x$x[-nrow(.x)])
+                })
+            ) |>
+            #dplyr::select(id_dataset, sample_type, core_label, measurement_device, scan_number, purge_delay, x_variable_min, x_variable_max, spectral_resolution) |>
+            dplyr::summarise(
+              n = length(core_label),
+              n_cores = 
+                core_label[sample_type == "peat"] |>
+                unique() |>
+                length(),
+              n_missing_metadata_measurement_device =
+                sum(is.na(measurement_device)),
+              n_missing_metadata_measurement =
+                sum(is.na(scan_number)),
+              measurement_device = 
+                measurement_device[measurement_device != "FTIR spectrometer"] |>
+                stringr::str_remove(pattern = " \\(.+\\)") |>
+                unique() |>
+                sort() |>
+                paste(collapse = ", "),
+              dplyr::across(
+                dplyr::all_of(c("scan_number", "purge_delay", "x_variable_min", "x_variable_max", "spectral_resolution")),
+                function(.x) {
+                  digits <- 
+                    switch(
+                      dplyr::cur_column(),
+                      "scan_number" = ,
+                      "purge_delay" = 0,
+                      "x_variable_min" =,
+                      "x_variable_max" = 0,
+                      "spectral_resolution" = 1 
+                    )
+                  unit <- 
+                    switch(
+                      dplyr::cur_column(),
+                      "scan_number" = "",
+                      "purge_delay" = "s",
+                      "x_variable_min" = "cm$^{-1}$",
+                      "x_variable_max" = "cm$^{-1}$",
+                      "spectral_resolution" = "cm$^{-1}$" 
+                    )
+                  .x |>
+                    range(na.rm = TRUE) |>
+                    round(digits = digits) |>
+                    unique() |>
+                    paste(collapse = " to ")
+                }
+              ),
+              geographical_coverage_plot_file =
+                paste0("figures/irp_plot_23_", i, ".pdf"),
+              core_label_train =
+                list(unique(paste0(id_dataset, "_", core_label)[id_measurement %in% index])),
+              core_label_test_only =
+                list(setdiff(paste0(id_dataset, "_", core_label), core_label_train[[1]])),
+              n_core_label_test_only = length(core_label_test_only[[1]]),
+              .groups = "drop"
+            )
+            
+        })
+    ) |>
+    dplyr::select(id_model, target_variable, target_variable_label, id_preprocessing, metadata) |>
+    tidyr::unnest("metadata")
+  
+}
 
 
 

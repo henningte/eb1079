@@ -59,6 +59,7 @@ header-includes:
   - \usepackage{booktabs}
   - \usepackage{multirow}
   - \usepackage[version=4]{mhchem}
+  - \usepackage[export]{adjustbox}
   - \usepackage[modulo]{lineno}
   - \linenumbers
   - \usepackage{xr} \externaldocument[main-]{irp-paper}
@@ -427,6 +428,81 @@ With the models for the enthalpy of combustion and entropy of formation, we coul
 
 ```{r irp-plot-5, fig.cap='(ref:irp-plot-5-caption)', out.width="60%"}
 knitr::include_graphics(tar_read(irp_plot_5))
+```
+
+
+
+# Metadata for pmird data subsets for each model
+
+(ref:irp-tab-4-1-caption) Summary of the data subset from the pmird database used for each model. "Derivative" indicates what derivative of the spectra were computed. "Samples" gives the number of samples (observations) and, in parentheses, the number of peat cores that were used for each model. "Missing" gives the number of records for which no measurement metadata are available. "Device" lists all measurement devices that were used to record spectra. "Scans" gives the number of single spectra scans that were averaged. "Purge delay" gives the duration during which the measurement cell was purged with synthetic air before measurements (s). "Range" gives, separated by commas, the minimum and maximum of the wavenumber range for the spectra, and the spectral resolution (all in cm$^{-1}$).
+
+```{r irp-tab-4-1, tab.cap="(ref:irp-tab-4-1-caption)"}
+tar_load(irp_table_4) 
+
+irp_table_4 |>
+  dplyr::select(-n_missing_metadata_measurement_device, -target_variable_label) |>
+  dplyr::mutate(
+    derivative = id_preprocessing - 1L,
+    variable = 
+      irp_get_names_target_variables(
+        target_variable, 
+        what = "target_variable_name_latex_long"
+      )
+  ) |>
+  dplyr::select(variable, derivative, n, n_cores, n_missing_metadata_measurement, measurement_device, scan_number, purge_delay, x_variable_min, x_variable_max, spectral_resolution, geographical_coverage_plot_file) |>
+  dplyr::mutate(
+    n = paste0(n, " (", n_cores, ")"),
+    x_variable_min = paste0(x_variable_min, ", ", x_variable_max, ", ", spectral_resolution)
+  ) |>
+  dplyr::select(-n_cores, -x_variable_max, -spectral_resolution, -geographical_coverage_plot_file) |>
+  kableExtra::kable(
+    format = "latex",
+    booktabs = TRUE, 
+    longtable = TRUE,
+    escape = FALSE, 
+    row.names = FALSE,
+    col.names = c("Variable", "Derivative", "Samples", "Missing", "Device", "Scans", "Purge delay", "Range")
+  ) |>
+  kableExtra::kable_styling(latex_options = c("HOLD_position"), font_size = 6) |>
+  kableExtra::column_spec(1, width = "5em") |>
+  kableExtra::column_spec(5, width = "10em") |>
+  kableExtra::column_spec(8, width = "7em")
+```
+
+
+(ref:irp-tab-4-2-caption) Geographical coverage of the peat core data used for each model. "Derivative" indicates what derivative of the spectra were computed. "Map" shows the sampling locations of the peat cores. White filled points indicate peat cores that were not used to train the models, but only for model testing. Source of the land surface geometry: https://www.naturalearthdata.com.
+
+```{r irp-tab-4-2, tab.cap="(ref:irp-tab-4-2-caption)"}
+a <- tar_read(irp_plot_23)
+
+irp_table_4 |>
+  dplyr::select(-n_missing_metadata_measurement_device, -target_variable_label) |>
+  dplyr::mutate(
+    derivative = id_preprocessing - 1L,
+    variable = 
+      irp_get_names_target_variables(
+        target_variable, 
+        what = "target_variable_name_latex_long"
+      )
+  ) |>
+  dplyr::select(variable, derivative, n, n_cores, n_missing_metadata_measurement, measurement_device, scan_number, purge_delay, x_variable_min, x_variable_max, spectral_resolution, geographical_coverage_plot_file) |>
+  dplyr::mutate(
+    geographical_coverage_plot_file = 
+      paste0("\\includegraphics[valign=true, width=4in, height=2in]{", geographical_coverage_plot_file, "}\\\\"),
+    n = paste0(n, " (", n_cores, ")"),
+    x_variable_min = paste0(x_variable_min, ", ", x_variable_max, ", ", spectral_resolution)
+  ) |>
+  dplyr::select(variable, derivative, geographical_coverage_plot_file) |>
+  kableExtra::kable(
+    format = "latex",
+    booktabs = TRUE, 
+    longtable = TRUE,
+    escape = FALSE, 
+    row.names = FALSE,
+    col.names = c("Variable", "Derivative", "Map")
+  ) |>
+  kableExtra::kable_styling(latex_options = c("HOLD_position"), font_size = 6) |>
+  kableExtra::column_spec(1, width = "5em")
 ```
 
 
